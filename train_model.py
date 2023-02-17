@@ -17,7 +17,7 @@ import os
 import dataloader as dl
 import nn_definitions as nn_d
 import utility as ut
-from model_3 import CNNGenerator
+from model_generator import CNNGenerator
 
 
 def train_model( lr, epochs, batch_size, k_epochs_d, alpha, beta, gamma, out_dir, noise_size=(1,2**15)):

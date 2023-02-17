@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import utility as ut
-from model_3 import CNNGenerator
+from model_generator import CNNGenerator
 
 data_dir = './gen_data/'
 save = True
