@@ -65,29 +65,6 @@ def plot_samples():
     print("\tLoading samples ... ")
     samples = np.load(data_dir + 'samples.npz')["arr_0"]
 
-    # idx = 48
-
-    # gen_sample = samples[idx, 0, :]
-    # real_sample = np.genfromtxt('data_train.csv', delimiter=',')[42,:]
-
-    # fig, ax = plt.subplots(1,2)
-
-    # ax[0].plot(gen_sample)
-    # ax[0].set_title("Generated signal")
-    # ax[1].plot(real_sample)
-    # ax[1].set_title("Real signal")
-    # if save: plt.savefig(data_dir + "sample.png")
-    # if display: plt.show()
-
-    # fig, ax = plt.subplots(1,2)
-
-    # ax[0].plot(np.cumsum(gen_sample))
-    # ax[0].set_title("Generated cumsum signal")
-    # ax[1].plot(np.cumsum(real_sample))
-    # ax[1].set_title("Real cumsum signal")
-    # if save: plt.savefig(data_dir + "sample_cumsum.png")
-    # if display: plt.show()
-
     fig = plt.figure()
     for k in range(samples.shape[0]):
         plt.plot(np.cumsum(samples[k, 0, :]), linewidth=1.0)
@@ -157,11 +134,6 @@ def plot_structure(n_samples=64, len_=2**15, edge=4096, device="cuda"):
     if save: plt.savefig(data_dir + "s2_cumsum_samples.png")
     if display: plt.show()
 
-    
-
-    
-
-
 ### ======================================= ###
 
 def plot_real_data():
@@ -189,22 +161,3 @@ def plot_real_data():
 
 if __name__ == '__main__':
     main()
-
-# noise = torch.randn((4, 1, 2**15))
-# noise = torch.randn((4, 1, 2**15))
-# non_mean_noise = noise + 0.2
-
-# x = noise[:,:,:]
-# y = non_mean_noise[:,:,:]
-
-# z = torch.square(torch.mul(x,torch.cumsum(y, dim=2)))
-# ans = torch.mean(z, dim=2)
-# print(ans.shape)
-# print(ans)
-
-# vx = x - torch.mean(x, dim=0)
-# vy = y - torch.mean(y, dim=0)
-# cost = vx * vy * torch.rsqrt(torch.sum(vx ** 2)) * torch.rsqrt(torch.sum(vy ** 2))
-# print("vx:", vx.shape)
-# print("vy:", vy.shape)
-# print("cost:", cost.shape)
