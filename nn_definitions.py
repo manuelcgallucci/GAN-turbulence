@@ -161,9 +161,6 @@ def weights_init(m):
         nn.init.normal_(m.weight.data, 1.0, 0.02)
         nn.init.constant_(m.bias.data, 0)
 
-
-
-
 class CNNGenerator(nn.Module):
     def __init__(self):
         super().__init__()
@@ -360,8 +357,6 @@ class CNNGenerator(nn.Module):
 
         out  = self.cnntrans1(out)
         return out
-
-
 
 class DiscriminatorLinear(nn.Module):
     def __init__(self):

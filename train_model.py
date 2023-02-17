@@ -76,7 +76,7 @@ def train_model( lr, epochs, batch_size, k_epochs_d, alpha, beta, gamma, out_dir
     scales=np.unique(uu.astype(int))
     scales=scales[0:100]
     
-    s2 = ut.calculate_s2_v2(torch.cumsum(data_train[:,None,:], dim=2), scales, device=device)
+    s2 = ut.calculate_s2(torch.cumsum(data_train[:,None,:], dim=2), scales, device=device)
     mean_s2 = torch.mean(s2, dim=[0,1]) # This gives the s2 tensor of size (len(scales))
     mean_s2 = mean_s2[None, None, :] 
     for epoch in range(epochs):

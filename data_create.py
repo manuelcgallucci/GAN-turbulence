@@ -43,21 +43,9 @@ plt.figure()
 plt.hist(signal, bins=30)
 plt.show()
 
-if True:
-    percentage_train = 0.9
-    percentage_val = 0.05
-    idx_train = int(N_samples*percentage_train)
-    idx_validation = int(N_samples*(percentage_train+percentage_val))
-    
-    print("Number of training samples:",idx_train) 
+np.save('./data/data_incrs.npy', incrs)
+np.save('./data/data.npy', data)
 
-    data_train = incrs[:idx_train,:]
-    data_validation = incrs[idx_train:idx_validation]
-    data_test = incrs[idx_validation:]
-    
-    np.savetxt('data_train.csv', data_train, delimiter=',')
-    np.savetxt('data_validation.csv', data_validation, delimiter=',')
-    np.savetxt('data_test.csv', data_test, delimiter=',')
     
 
 
