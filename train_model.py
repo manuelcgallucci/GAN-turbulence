@@ -205,17 +205,18 @@ def train_model( lr, epochs, batch_size, k_epochs_d, alpha, beta, gamma, out_dir
 
 if __name__ == '__main__':
     lr = 0.002
-    epochs = 100
+    epochs = 200
     batch_size = 32
-    k_epochs_d = 2
+    k_epochs_d = 3
     
     out_dir = './generated'
-    alpha = 0.5 # regularization parameter
-    beta = 0.01 # generator loss multiplier
+    alpha = 0.0 # regularization parameter
+    beta = 0.8 # generator loss multiplier
     gamma = 1.0 # discriminator loss multiplier
     
-    # out_dir = ut.get_dir(out_dir)
-    out_dir = os.path.join(out_dir, 'BD0Ouy')
+    out_dir = ut.get_dir(out_dir)
+    print(out_dir)
+    # out_dir = os.path.join(out_dir, 'ILUyQ7')
 
     meta_dict = {
         "lr":lr,
