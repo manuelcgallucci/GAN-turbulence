@@ -1,2 +1,4 @@
 
-data/uspa_mob15_1.dat
+data/
+__pycache__/
+generated/
