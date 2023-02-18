@@ -49,7 +49,6 @@ def train_model( lr, epochs, batch_size, k_epochs_d, alpha, beta, gamma, out_dir
 
     # Train dataset 
     data_train = torch.Tensor(np.load('./data/data.npy')) # Nsamples x L (L: length)
-    data_train = data_train[:,None,:]
     data_samples = data_train.size()[0]
     data_len = data_train.size()[1]
 
@@ -78,18 +77,18 @@ def train_model( lr, epochs, batch_size, k_epochs_d, alpha, beta, gamma, out_dir
     scales=scales[0:100]
     
     # s2 = ut.calculate_s2(torch.cumsum(data_train[:,None,:], dim=2), scales, device=device)
-    s2 = ut.calculate_s2(data_train, scales, device=device)
+    s2 = ut.calculate_s2(data_train[:,None,:], scales, device=device)
     mean_s2 = torch.mean(s2, dim=[0,1]) # This gives the s2 tensor of size (len(scales))
     mean_s2 = mean_s2[None, None, :] 
 
     # Take the target ones and zeros for the batch size and for the last (not complete batch)
 
     target_ones_full = torch.ones((batch_size, 1), device=device)
+    target_ones_partial = torch.ones((data_samples - batch_size * int(data_samples / batch_size), 1), device=device)
     target_ones = [target_ones_full, target_ones_partial]
-    target_ones_partial = torch.ones((data_samples - batch_size * np.floor(data_samples / batch_size), 1), device=device)
 
     target_zeros_full = torch.zeros((batch_size, 1), device=device)
-    target_zeros_partial = torch.ones((data_samples - batch_size * np.floor(data_samples / batch_size), 1), device=device)
+    target_zeros_partial = torch.ones((data_samples - batch_size * int(data_samples / batch_size), 1), device=device)
     target_zeros = [target_zeros_full, target_zeros_partial]
     
     last_batch_idx = np.ceil(data_samples / batch_size) - 1
@@ -130,14 +129,14 @@ def train_model( lr, epochs, batch_size, k_epochs_d, alpha, beta, gamma, out_dir
                 # Discriminator optimizer step
                 optim_d.step()
                 
-                loss_d_real_array[epoch] += loss_real / k_epochs_d
-                loss_d_fake_array[epoch] += loss_fake / k_epochs_d
-                loss_d_array[epoch] += loss_d / k_epochs_d
+                loss_d_real_array[epoch] += loss_real.item() / k_epochs_d
+                loss_d_fake_array[epoch] += loss_fake.item() / k_epochs_d
+                loss_d_array[epoch] += loss_d.item() / k_epochs_d
 
             # If pred_fake is all zeros then acc should be 1.0
             # We want this to be around 0.5. 1.0 means perfect accuracy (the generated samples are not similar to the samples)
-            acc_d_fake_array[epoch] += torch.sum(pred_fake < 0.5)
-            acc_d_real_array[epoch] += torch.sum(pred_real >= 0.5)
+            acc_d_fake_array[epoch] += torch.sum(pred_fake < 0.5).item()
+            acc_d_real_array[epoch] += torch.sum(pred_real >= 0.5).item()
 
             #optim_g.zero_grad()
             ## TRAIN GENERATOR
@@ -148,7 +147,7 @@ def train_model( lr, epochs, batch_size, k_epochs_d, alpha, beta, gamma, out_dir
             # Cut samples (no)
             
             classifications = discriminator(generated_signal)
-            loss_g = criterion_BCE(classifications, target_ones)
+            loss_g = criterion_BCE(classifications, target_ones[batch_idx == last_batch_idx])
 
             # E [( X * cumsum(Z) ) ^2]
             # loss_reg = torch.mean(torch.square(torch.mul(noise,torch.cumsum(generated_signal, dim=2))))
@@ -214,9 +213,9 @@ if __name__ == '__main__':
     alpha = 0.5 # regularization parameter
     beta = 0.01 # generator loss multiplier
     gamma = 1.0 # discriminator loss multiplier
-
+    
     # out_dir = ut.get_dir(out_dir)
-    out_dir = os.path.join(out_dir, 'DwqjD0')
+    out_dir = os.path.join(out_dir, 'BD0Ouy')
 
     meta_dict = {
         "lr":lr,
@@ -230,6 +229,6 @@ if __name__ == '__main__':
     }
 
     ut.save_meta(meta_dict, out_dir)
-    # train_model(lr, epochs, batch_size, k_epochs_d, alpha, beta, gamma, out_dir)
+    train_model(lr, epochs, batch_size, k_epochs_d, alpha, beta, gamma, out_dir)
 
 
