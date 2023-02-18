@@ -3,9 +3,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import utility as ut
-from model_generator import CNNGenerator
+from model_generator import CNNGeneratorBig2 as CNNGenerator
 
-data_dir = './gen_data/'
+data_dir = './generated/ILUyQ7/'
 save = True
 display = False
 
@@ -29,14 +29,14 @@ def plot_history():
     if save: plt.savefig(data_dir + "loss_discriminator.png")
     if display: plt.show()
 
-    plt.figure()
-    plt.plot(history["loss_g"] / np.max(history["loss_g"]))
-    plt.plot(history["loss_reg"] / np.max(history["loss_reg"]))
-    plt.plot(history["loss_gen"] / np.max(history["loss_gen"]))
-    plt.title("Losses of Generator -Normalized-")
-    plt.legend(["Generator", "Regularization", "Total"])
-    if save: plt.savefig(data_dir + "loss_generator.png")
-    if display: plt.show()
+    # plt.figure()
+    # plt.plot(history["loss_g"] / np.max(history["loss_g"]))
+    # plt.plot(history["loss_reg"] / np.max(history["loss_reg"]))
+    # plt.plot(history["loss_gen"] / np.max(history["loss_gen"]))
+    # plt.title("Losses of Generator -Normalized-")
+    # plt.legend(["Generator", "Regularization", "Total"])
+    # if save: plt.savefig(data_dir + "loss_generator.png")
+    # if display: plt.show()
 
     plt.figure()
     plt.plot(history["loss_gen"])
@@ -67,14 +67,14 @@ def plot_samples():
 
     fig = plt.figure()
     for k in range(samples.shape[0]):
-        plt.plot(np.cumsum(samples[k, 0, :]), linewidth=1.0)
-    fig.suptitle('Generated cumsum samples')
+        plt.plot(samples[k, 0, :], linewidth=1.0)
+    fig.suptitle('Generated samples')
     if save: plt.savefig(data_dir + "sample_once.png")
     if display: plt.show()
 
     fig, ax = plt.subplots(8,8)
     for k, axs in enumerate(fig.axes):
-        axs.plot(np.cumsum(samples[k, 0, :]))
+        axs.plot(samples[k, 0, :])
         axs.get_xaxis().set_ticks([])
         axs.get_yaxis().set_ticks([])
     if save: plt.savefig(data_dir + "sample_all.png")
@@ -96,6 +96,7 @@ def plot_structure(n_samples=64, len_=2**15, edge=4096, device="cuda"):
     with torch.no_grad():
         generated_samples = generator(noise)
     
+    generated_samples = generated_samples[:,:,edge:-edge]
     plt.figure()
     for k in range(n_samples):
         plt.plot(generated_samples[k,0,:].cpu(), linewidth=1.0)
@@ -104,35 +105,37 @@ def plot_structure(n_samples=64, len_=2**15, edge=4096, device="cuda"):
     if display: plt.show()
     
     s2 = ut.calculate_s2(generated_samples, scales, device=device).cpu()
-
+    log_scale = np.log(scales)
     plt.figure()
     for k in range(n_samples):
-        plt.plot(np.log(scales), s2[k,0,:], color=color, linewidth=1.0)
-    plt.plot(np.log(scales), torch.mean(s2[:,0,:], dim=0), 'r', linewidth=2.0)
+        plt.plot(log_scale, s2[k,0,:], color=color, linewidth=1.0)
+    plt.plot(log_scale, torch.mean(s2[:,0,:], dim=0), 'r', linewidth=2.0)
     plt.title("Structure function on the samples")
     plt.xlabel("scales (log)")
+    plt.xticks([x for x in range(0, int(np.ceil(log_scale[-1])))])
+    plt.grid()
     if save: plt.savefig(data_dir + "s2_samples.png")
     if display: plt.show()
 
-    generated_samples = torch.cumsum(generated_samples, dim=2)[:,:,edge:-edge]
+    # generated_samples = torch.cumsum(generated_samples, dim=2)[:,:,edge:-edge]
 
-    plt.figure()
-    for k in range(n_samples):
-        plt.plot(generated_samples[k,0,:].cpu(), linewidth=1.0)
-    plt.title("Generated cumsum samples")
-    if save: plt.savefig(data_dir + "s2_gen_samples_cumsum.png")
-    if display: plt.show()
+    # plt.figure()
+    # for k in range(n_samples):
+    #     plt.plot(generated_samples[k,0,:].cpu(), linewidth=1.0)
+    # plt.title("Generated cumsum samples")
+    # if save: plt.savefig(data_dir + "s2_gen_samples_cumsum.png")
+    # if display: plt.show()
 
-    s2 = ut.calculate_s2(generated_samples, scales, device=device).cpu()
+    # s2 = ut.calculate_s2(generated_samples, scales, device=device).cpu()
 
-    plt.figure()
-    for k in range(n_samples):
-        plt.plot(np.log(scales), s2[k,0,:], color=color, linewidth=1.0)
-    plt.plot(np.log(scales), torch.mean(s2[:,0,:], dim=0), 'r', linewidth=2.0)
-    plt.title("Structure function on the cumsum samples")
-    plt.xlabel("scales (log)")
-    if save: plt.savefig(data_dir + "s2_cumsum_samples.png")
-    if display: plt.show()
+    # plt.figure()
+    # for k in range(n_samples):
+    #     plt.plot(np.log(scales), s2[k,0,:], color=color, linewidth=1.0)
+    # plt.plot(np.log(scales), torch.mean(s2[:,0,:], dim=0), 'r', linewidth=2.0)
+    # plt.title("Structure function on the cumsum samples")
+    # plt.xlabel("scales (log)")
+    # if save: plt.savefig(data_dir + "s2_cumsum_samples.png")
+    # if display: plt.show()
 
 ### ======================================= ###
 
