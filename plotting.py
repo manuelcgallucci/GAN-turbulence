@@ -10,8 +10,8 @@ save = True
 display = False
 
 def main():
-    plot_real_data()
-    
+    # plot_real_data()
+    plot_compare_structure()
     # plot_structure()
     # plot_history()
     # plot_samples()
@@ -136,6 +136,43 @@ def plot_structure(n_samples=64, len_=2**15, edge=4096, device="cuda"):
     # plt.xlabel("scales (log)")
     # if save: plt.savefig(data_dir + "s2_cumsum_samples.png")
     # if display: plt.show()
+
+
+def plot_compare_structure(n_samples=64, len_=2**15, edge=4096, device="cuda"):
+    color=np.array([166, 178, 255])/255.0
+
+    nv=10
+    uu=2**np.arange(0,13,1/nv)
+    scales=np.unique(uu.astype(int))
+    scales=scales[0:100]
+
+    generator = CNNGenerator().to(device)
+    generator.load_state_dict(torch.load(data_dir + 'generator.pt'))
+    noise = torch.randn((n_samples, 1, len_+2*edge), device=device)
+    with torch.no_grad():
+        generated_samples = generator(noise)
+    
+    generated_samples = generated_samples[:,:,edge:-edge]
+    
+    s2 = ut.calculate_s2(generated_samples, scales, device=device)
+    s2_mean_generated = torch.mean(s2[:,0,:], dim=0).cpu()
+    
+    
+    data_train = np.load('./data/data.npy')
+    s2 = ut.calculate_s2(torch.Tensor(data_train[:,None,:]), scales, device=device)
+    s2_mean_real = torch.mean(s2[:,0,:], dim=0).cpu()
+
+    log_scale = np.log(scales)
+    plt.figure()
+    plt.plot(log_scale, s2_mean_generated, 'r', linewidth=2.0)
+    plt.plot(log_scale, s2_mean_real, linewidth=2.0)
+    plt.title("Structure function on the samples")
+    plt.xlabel("scales (log)")
+    plt.xticks([x for x in range(0, int(np.ceil(log_scale[-1])))])
+    plt.legend(["Generated", "Real"])
+    plt.grid()
+    if save: plt.savefig(data_dir + "s2_comparison.png")
+    if display: plt.show()
 
 ### ======================================= ###
 
