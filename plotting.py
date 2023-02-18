@@ -5,16 +5,16 @@ import matplotlib.pyplot as plt
 import utility as ut
 from model_generator import CNNGeneratorBig2 as CNNGenerator
 
-data_dir = './generated/ILUyQ7/'
+data_dir = './generated/zIbtWI/'
 save = True
 display = False
 
 def main():
-    # plot_real_data()
+    plot_real_data()
     
-    plot_structure()
-    plot_history()
-    plot_samples()
+    # plot_structure()
+    # plot_history()
+    # plot_samples()
     
 def plot_history():
 
@@ -139,26 +139,48 @@ def plot_structure(n_samples=64, len_=2**15, edge=4096, device="cuda"):
 
 ### ======================================= ###
 
-def plot_real_data():
-    data_train = np.genfromtxt('data_train.csv', delimiter=',')
+def plot_real_data(device="cuda"):
+    data_train = np.load('./data/data.npy')
+    n_samples = data_train.shape[0]
 
     fig, ax = plt.subplots(8,8)
-    fig.suptitle('Real cumsum samples (Train)')
+    fig.suptitle('Real samples')
     for k, axs in enumerate(fig.axes):
-        axs.plot(np.cumsum(data_train[k, :]))
+        axs.plot(data_train[k, :])
         axs.get_xaxis().set_ticks([])
         axs.get_yaxis().set_ticks([])
-    if save: plt.savefig(data_dir + "samples_real_cumusm.png")
+    if save: plt.savefig("./data/samples_real.png")
     if display: plt.show()
 
     plt.figure()
     max_k = 64
     for k in range(data_train.shape[0]):
         if k >= max_k: break
-        plt.plot(np.cumsum(data_train[k, :]), linewidth=1.0)
-    fig.suptitle(str(max_k) + 'Real cumsum samples (Train)')
-    if save: plt.savefig(data_dir + "sample_once_real_cumsum.png")
+        plt.plot(data_train[k, :], linewidth=1.0)
+    fig.suptitle(str(max_k) + ' Real samples')
+    if save: plt.savefig("./data/sample_once_real.png")
     if display: plt.show()
+
+    color=np.array([166, 178, 255])/255.0
+
+    nv=10
+    uu=2**np.arange(0,13,1/nv)
+    scales=np.unique(uu.astype(int))
+    scales=scales[0:100]
+    
+    s2 = ut.calculate_s2(torch.Tensor(data_train[:,None,:]), scales, device=device).cpu()
+    log_scale = np.log(scales)
+    plt.figure()
+    for k in range(n_samples):
+        plt.plot(log_scale, s2[k,0,:], color=color, linewidth=1.0)
+    plt.plot(log_scale, torch.mean(s2[:,0,:], dim=0), 'r', linewidth=2.0)
+    plt.title("Structure function on the real samples")
+    plt.xlabel("scales (log)")
+    plt.xticks([x for x in range(0, int(np.ceil(log_scale[-1])))])
+    plt.grid()
+    if save: plt.savefig("./data/s2_real.png")
+    if display: plt.show()
+
 
 
 
