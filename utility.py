@@ -25,6 +25,25 @@ def calculate_s2(signal, scales, device="cpu"):
     return s2
 
 
+def calculate_structure(signal, scales, power=2, device="cpu"):
+    '''
+    signal is the signal of study and scales is an array with the values of the scales of analysis
+    '''      
+    structure_f = torch.zeros((signal.shape[0],1,len(scales)), dtype=torch.float32, device=device)
+
+    # We normalize the image by centering and standarizing it
+    Nreal=signal.size()[0]
+    tmp = torch.zeros(signal.shape, device=device)    
+    for ir in range(Nreal):
+        nanstdtmp = torch.sqrt(torch.nanmean(torch.abs(signal[ir]-torch.nanmean(signal[ir]))**2))
+        tmp[ir,0,:] = (signal[ir]-torch.nanmean(signal[ir]))/nanstdtmp   
+
+    for idx, scale in enumerate(scales):
+        structure_f[:,:,idx] = torch.log(torch.mean(torch.pow(tmp[:,:,scale:]-tmp[:,:,:-scale], power), dim=2))
+
+    return structure_f
+
+
 
 def get_dir(dir, length=6):
     name = ''.join(random.choices(string.ascii_letters + string.digits, k=length))
