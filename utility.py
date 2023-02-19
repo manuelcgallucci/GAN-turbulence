@@ -25,11 +25,11 @@ def calculate_s2(signal, scales, device="cpu"):
     return s2
 
 
-def calculate_structure(signal, scales, power=2, device="cpu"):
+def calculate_structure(signal, scales, device="cpu"):
     '''
     signal is the signal of study and scales is an array with the values of the scales of analysis
     '''      
-    structure_f = torch.zeros((signal.shape[0],1,len(scales)), dtype=torch.float32, device=device)
+    structure_f = torch.zeros((signal.shape[0],3,len(scales)), dtype=torch.float32, device=device)
 
     # We normalize the image by centering and standarizing it
     Nreal=signal.size()[0]
@@ -39,7 +39,15 @@ def calculate_structure(signal, scales, power=2, device="cpu"):
         tmp[ir,0,:] = (signal[ir]-torch.nanmean(signal[ir]))/nanstdtmp   
 
     for idx, scale in enumerate(scales):
-        structure_f[:,:,idx] = torch.log(torch.mean(torch.pow(tmp[:,:,scale:]-tmp[:,:,:-scale], power), dim=2))
+        incrs = tmp[:,0,scale:]-tmp[:,0,:-scale]
+        structure_f[:,0,idx] = torch.log(torch.mean(torch.square(incrs), dim=1))
+        
+        stdincrs = torch.std(incrs, dim=1)
+        incrsnorm = (incrs - torch.nanmean(incrs, dim=1)[:,None]) / stdincrs[:,None] # Batch x Length
+        
+        structure_f[:,1,idx]= torch.nanmean(torch.pow(incrsnorm,3), dim=1)
+        structure_f[:,2,idx]= torch.nanmean(torch.pow(incrsnorm, 4), dim=1) / 3
+        
 
     return structure_f
 

@@ -3,9 +3,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import utility as ut
-from model_generator import CNNGeneratorBig2 as CNNGenerator
+from model_generator import CNNGeneratorBigConcat as CNNGenerator
 
-data_dir = './generated/zIbtWI/'
+data_dir = './generated/rImFoR/'
 save = True
 display = False
 
@@ -139,7 +139,7 @@ def plot_structure(n_samples=64, len_=2**15, edge=4096, device="cuda"):
 
 
 def plot_compare_structure(n_samples=64, len_=2**15, edge=4096, device="cuda"):
-    color=np.array([166, 178, 255])/255.0
+    data_train = np.load('./data/data.npy')
 
     nv=10
     uu=2**np.arange(0,13,1/nv)
@@ -153,26 +153,43 @@ def plot_compare_structure(n_samples=64, len_=2**15, edge=4096, device="cuda"):
         generated_samples = generator(noise)
     
     generated_samples = generated_samples[:,:,edge:-edge]
-    
-    s2 = ut.calculate_s2(generated_samples, scales, device=device)
-    s2_mean_generated = torch.mean(s2[:,0,:], dim=0).cpu()
-    
-    
-    data_train = np.load('./data/data.npy')
-    s2 = ut.calculate_s2(torch.Tensor(data_train[:,None,:]), scales, device=device)
-    s2_mean_real = torch.mean(s2[:,0,:], dim=0).cpu()
-
     log_scale = np.log(scales)
-    plt.figure()
-    plt.plot(log_scale, s2_mean_generated, 'r', linewidth=2.0)
-    plt.plot(log_scale, s2_mean_real, linewidth=2.0)
-    plt.title("Structure function on the samples")
-    plt.xlabel("scales (log)")
-    plt.xticks([x for x in range(0, int(np.ceil(log_scale[-1])))])
-    plt.legend(["Generated", "Real"])
-    plt.grid()
-    if save: plt.savefig(data_dir + "s2_comparison.png")
-    if display: plt.show()
+    
+    
+    struct = ut.calculate_structure(generated_samples, scales, device=device)
+    struct_mean_generated = torch.mean(struct[:,:,:], dim=0).cpu()
+    
+    struct = ut.calculate_structure(torch.Tensor(data_train[:,None,:]), scales, device=device)
+    struct_mean_real = torch.mean(struct[:,:,:], dim=0).cpu()
+
+    for idx, k in enumerate(range(2,5)):
+        plt.figure()
+        plt.plot(log_scale, struct_mean_generated[idx,:], 'r', linewidth=2.0)
+        plt.plot(log_scale, struct_mean_real[idx,:], linewidth=2.0)
+        plt.title("Structure function s{:d} on the samples".format(k))
+        plt.xlabel("scales (log)")
+        plt.xticks([x for x in range(0, int(np.ceil(log_scale[-1])))])
+        plt.legend(["Generated", "Real"])
+        plt.grid()
+        if save: plt.savefig(data_dir + "s{:d}_comparison.png".format(k))
+        if display: plt.show()
+
+    # s2 = ut.calculate_s2(generated_samples, scales, device=device)
+    # s2_mean_generated = torch.mean(s2[:,0,:], dim=0).cpu()
+    
+    # s2 = ut.calculate_s2(torch.Tensor(data_train[:,None,:]), scales, device=device)
+    # s2_mean_real = torch.mean(s2[:,0,:], dim=0).cpu()
+
+    # plt.figure()
+    # plt.plot(log_scale, s2_mean_generated, 'r', linewidth=2.0)
+    # plt.plot(log_scale, s2_mean_real, linewidth=2.0)
+    # plt.title("Structure function s on the samples")
+    # plt.xlabel("scales (log)")
+    # plt.xticks([x for x in range(0, int(np.ceil(log_scale[-1])))])
+    # plt.legend(["Generated", "Real"])
+    # plt.grid()
+    # if save: plt.savefig(data_dir + "s2_comparison.png")
+    # if display: plt.show()
 
 ### ======================================= ###
 
