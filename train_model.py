@@ -17,7 +17,7 @@ import os
 import dataloader as dl
 import nn_definitions as nn_d
 import utility as ut
-from model_generator import CNNGeneratorBigConcat as CNNGenerator
+from model_generator import CNNGeneratorBigConcatDropout as CNNGenerator
 
 
 def train_model( lr, epochs, batch_size, k_epochs_d, alpha, beta, gamma, out_dir, noise_size=(1,2**15)):
@@ -203,15 +203,20 @@ def train_model( lr, epochs, batch_size, k_epochs_d, alpha, beta, gamma, out_dir
     torch.save(generator.state_dict(), out_dir + '/generator.pt')
     torch.save(discriminator.state_dict(), out_dir + '/discriminator.pt')
 
+    with open( os.path.join(out_dir, "time.txt"), "w") as f:
+        f.write("\nTotal time to train in seconds: {:f}".format(end_time - start_time))
+    
+    return 
+
 if __name__ == '__main__':
     lr = 0.002
-    epochs = 200
+    epochs = 400
     batch_size = 32
     k_epochs_d = 3
     
     out_dir = './generated'
     alpha = 0.0 # regularization parameter
-    beta = 0.8 # generator loss multiplier
+    beta = 0.5 # generator loss multiplier
     gamma = 1.0 # discriminator loss multiplier
     
     out_dir = ut.get_dir(out_dir)
