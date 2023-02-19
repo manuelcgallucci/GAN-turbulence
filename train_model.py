@@ -17,7 +17,7 @@ import os
 import dataloader as dl
 import nn_definitions as nn_d
 import utility as ut
-from model_generator import CNNGenerator
+from model_generator import CNNGeneratorBigConcat as CNNGenerator
 
 
 def train_model( lr, epochs, batch_size, k_epochs_d, alpha, beta, gamma, out_dir, noise_size=(1,2**15)):
@@ -188,9 +188,9 @@ def train_model( lr, epochs, batch_size, k_epochs_d, alpha, beta, gamma, out_dir
     with torch.no_grad():
         generated_samples = generator(noise)
 
-    np.savez(out_dir+"samples.npz", generated_samples.cpu().detach().numpy())
+    np.savez(out_dir+"/samples.npz", generated_samples.cpu().detach().numpy())
 
-    np.savez(out_dir+"metaEvo.npz", \
+    np.savez(out_dir+"/metaEvo.npz", \
             loss_d_fake = loss_d_fake_array.cpu().detach().numpy(), \
             loss_d_real = loss_d_real_array.cpu().detach().numpy(), \
             loss_d = loss_d_array.cpu().detach().numpy(), \
@@ -200,8 +200,8 @@ def train_model( lr, epochs, batch_size, k_epochs_d, alpha, beta, gamma, out_dir
             loss_reg = loss_reg_array.cpu().detach().numpy(), \
             loss_gen=loss_gen_array.cpu().detach().numpy())
 
-    torch.save(generator.state_dict(), out_dir + 'generator.pt')
-    torch.save(discriminator.state_dict(), out_dir + 'discriminator.pt')
+    torch.save(generator.state_dict(), out_dir + '/generator.pt')
+    torch.save(discriminator.state_dict(), out_dir + '/discriminator.pt')
 
 if __name__ == '__main__':
     lr = 0.002
