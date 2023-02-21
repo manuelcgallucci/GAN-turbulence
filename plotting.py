@@ -206,7 +206,7 @@ def plot_histogram(n_samples=64, len_=2**15, edge=4096, n_bins=150, scales=[2**x
     delta_hist = 2
     plt.figure(figsize=(6,6))
     for idx, scale in enumerate(scales):
-        param_idx = np.argmax(np.array([scale < param[0] for param in params_]) > 0)
+        param_idx = np.argmax(np.array([scale <= param[0] for param in params_]) > 0)
         plt.plot(bins[0:-1], delta_hist * (-idx) + histograms[idx,:], color=params_[param_idx][2], linewidth=1.5, label="sc:"+str(scale))
     plt.plot(binsg[0:-1],delta_hist * (-len(scales)) + np.log(histgn), "--", color="k", linewidth=1.5, alpha=0.8, label="Gaussian")
     plt.title("Histogram")
