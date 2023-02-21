@@ -11,8 +11,8 @@ display = False
 
 def main():
     # plot_real_data()
-    # plot_compare_structure(eta=6, L=2375)
-    plot_histogram(n_samples=64, scales=[2,4,8,16,128,256,1024,4096,8192,16384])
+    plot_compare_structure(eta=5, L=2350)
+    # plot_histogram(n_samples=64, scales=[2,4,8,16,128,256,1024,4096,8192,16384])
     # plot_structure()
     # plot_history()
     # plot_samples()
@@ -161,6 +161,8 @@ def plot_compare_structure(n_samples=64, len_=2**15, edge=4096, eta=None, L=None
     struct_mean_generated = torch.mean(struct[:,:,:], dim=0).cpu()
     struct_std_generate = torch.std(struct[:,:,:], dim=0).cpu()
 
+    # TODO correct the data trin so this is not needed anymore
+    data_train = np.flip(data_train, axis=1).copy()
     struct = ut.calculate_structure(torch.Tensor(data_train[:,None,:]), scales, device=device)
     struct_mean_real = torch.mean(struct[:,:,:], dim=0).cpu()
     struct_std_real = torch.std(struct[:,:,:], dim=0).cpu()
