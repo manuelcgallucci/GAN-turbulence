@@ -29,6 +29,7 @@ def calculate_structure(signal, scales, device="cpu"):
     '''
     signal is the signal of study and scales is an array with the values of the scales of analysis
     '''      
+    # This contains in order, log(s2), skewness, log(flatness / 3)
     structure_f = torch.zeros((signal.shape[0],3,len(scales)), dtype=torch.float32, device=device)
 
     # We normalize the image by centering and standarizing it
@@ -40,16 +41,39 @@ def calculate_structure(signal, scales, device="cpu"):
 
     for idx, scale in enumerate(scales):
         incrs = tmp[:,0,scale:]-tmp[:,0,:-scale]
-        structure_f[:,0,idx] = torch.log(torch.mean(torch.square(incrs), dim=1))
+        structure_f[:,0,idx] = torch.mean(torch.square(incrs), dim=1)
         
         stdincrs = torch.std(incrs, dim=1)
         incrsnorm = (incrs - torch.nanmean(incrs, dim=1)[:,None]) / stdincrs[:,None] # Batch x Length
         
-        structure_f[:,1,idx]= torch.nanmean(torch.pow(incrsnorm,3), dim=1)
-        structure_f[:,2,idx]= torch.nanmean(torch.pow(incrsnorm, 4), dim=1) / 3
-        
+        structure_f[:,1,idx] = torch.nanmean(torch.pow(incrsnorm,3), dim=1)
+        structure_f[:,2,idx] = torch.nanmean(torch.pow(incrsnorm, 4), dim=1)
+
+    # log s2 and log flatness / 3
+    structure_f[:,0,:] = torch.log(structure_f[:,0,:])
+    structure_f[:,2,:] = torch.log(structure_f[:,2,:] / 3)
 
     return structure_f
+
+
+# Device has to be cpu since histogram is not yet implemented on CUDA
+def calculate_histogram(signal, scales, n_bins, device="cpu"):
+    if not (device is "cpu"):
+        return 
+    Nreal=signal.size()[0]
+
+    histograms = np.zeros((Nreal, n_bins))
+    # We normalize the image by centering and standarizing it
+    tmp = torch.zeros(signal.shape, device=device)    
+    for ir in range(Nreal):
+        nanstdtmp = torch.sqrt(torch.nanmean(torch.abs(signal[ir]-torch.nanmean(signal[ir]))**2))
+        tmp[ir,0,:] = (signal[ir]-torch.nanmean(signal[ir]))/nanstdtmp   
+
+    for idx, scale in enumerate(scales):
+        incrs = tmp[:,0,scale:]-tmp[:,0,:-scale]
+        histograms[idx, :], bins = torch.histogram(incrs, n_bins, density=True)
+
+    return histograms, bins
 
 
 
