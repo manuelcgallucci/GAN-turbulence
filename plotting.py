@@ -3,19 +3,23 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import utility as ut
-from model_generator import CNNGeneratorBigConcat as CNNGenerator
 
-data_dir = './generated/rImFoR/'
+
+from model_generator import CNNGeneratorBigConcat as CNNGenerator
+from model_discriminator import DiscriminatorMultiNetNo512 as Discriminator
+data_dir = './generated/U2lVlk/'
+
+
 save = True
 display = False
 
 def main():
     # plot_real_data()
     plot_compare_structure(eta=5, L=2350)
-    # plot_histogram(n_samples=64, scales=[2,4,8,16,128,256,1024,4096,8192,16384])
+    plot_histogram(n_samples=64, scales=[2,4,8,16,128,256,1024,4096,8192,16384])
     # plot_structure()
-    # plot_history()
-    # plot_samples()
+    plot_history()
+    plot_samples()
     
 def plot_history():
 
@@ -155,6 +159,7 @@ def plot_compare_structure(n_samples=64, len_=2**15, edge=4096, eta=None, L=None
         generated_samples = generator(noise)
     
     generated_samples = generated_samples[:,:,edge:-edge]
+    # generated_samples = torch.Tensor(np.load(data_dir + 'samples.npz')["arr_0"])
     log_scale = np.log(scales)
     
     struct = ut.calculate_structure(generated_samples, scales, device=device)
@@ -185,19 +190,23 @@ def plot_compare_structure(n_samples=64, len_=2**15, edge=4096, eta=None, L=None
         if save: plt.savefig(data_dir + "comparison_{:s}.png".format(names[idx]))
         if display: plt.show()
 
+    # Compute and save structure function metrics
+    mse_structure = torch.mean(torch.square(struct_mean_generated - struct_mean_real), dim=1)
+    print(mse_structure)
+    
 ### ======================================= ###
 
 def plot_histogram(n_samples=64, len_=2**15, edge=4096, n_bins=150, scales=[2**x for x in range(1,14)], device="cuda"):
-    # generator = CNNGenerator().to(device)
-    # generator.load_state_dict(torch.load(data_dir + 'generator.pt'))
-    # noise = torch.randn((n_samples, 1, len_+2*edge), device=device)
-    # with torch.no_grad():
-    #     generated_samples = generator(noise)
+    generator = CNNGenerator().to(device)
+    generator.load_state_dict(torch.load(data_dir + 'generator.pt'))
+    noise = torch.randn((n_samples, 1, len_+2*edge), device=device)
+    with torch.no_grad():
+        generated_samples = generator(noise)
     
-    # generated_samples = generated_samples[:,:,edge:-edge].cpu()
-    
-    generated_samples = torch.Tensor(np.load('./data/data.npy')[:,None,:])
-    histograms, bins = ut.calculate_histogram(generated_samples, scales, n_bins, device="cpu") 
+    generated_samples = generated_samples[:,:,edge:-edge].cpu()
+    # generated_samples = torch.Tensor(np.load(data_dir + 'samples.npz')["arr_0"])
+    # generated_samples = torch.Tensor(np.load('./data/data.npy')[:,None,:])
+    histograms, bins = ut.calculate_histogram(generated_samples, scales, n_bins, device="cpu", normalize_incrs=True) 
     histograms = np.log(histograms + 1e-5)
 
     histgn, binsg = np.histogram(np.random.randn(n_samples*len_), bins=n_bins, density=True)
@@ -208,7 +217,7 @@ def plot_histogram(n_samples=64, len_=2**15, edge=4096, n_bins=150, scales=[2**x
     for idx, scale in enumerate(scales):
         param_idx = np.argmax(np.array([scale <= param[0] for param in params_]) > 0)
         plt.plot(bins[0:-1], delta_hist * (-idx) + histograms[idx,:], color=params_[param_idx][2], linewidth=1.5, label="sc:"+str(scale))
-    plt.plot(binsg[0:-1],delta_hist * (-len(scales)) + np.log(histgn), "--", color="k", linewidth=1.5, alpha=0.8, label="Gaussian")
+    plt.plot(binsg[0:-1],delta_hist * (-(len(scales)-1)) + np.log(histgn), "--", color="k", linewidth=1.5, alpha=0.8, label="Gaussian")
     plt.title("Histogram")
     plt.legend(bbox_to_anchor = (1.25, 0.6), loc='center right')
     plt.yticks([])
@@ -216,7 +225,7 @@ def plot_histogram(n_samples=64, len_=2**15, edge=4096, n_bins=150, scales=[2**x
     plt.xlabel(r'$\delta^{\prime}_l u(x)$')
     plt.grid()
     plt.tight_layout()
-    if save: plt.savefig(data_dir + "histogram_real.png")
+    if save: plt.savefig(data_dir + "histogram.png")
     if display: plt.show()
 
 ### ======================================= ###
