@@ -13,14 +13,20 @@ from torch.utils.data import DataLoader
 import numpy as np
 from time import time
 import os 
+import sys
 
 import dataloader as dl
 import nn_definitions as nn_d
 import utility as ut
+# CNNGeneratorBCNocnn1
 from model_generator import CNNGeneratorBigConcat as CNNGenerator
+from model_discriminator import DiscriminatorMultiNetNo512 as Discriminator
 
+# DiscriminatorMultiNetWeightedAvg DiscriminatorMultiNetNo512
+plot_metadata_training = True
+# nohup python3 train_model.py > nohup_1.out &
 
-def train_model( lr, epochs, batch_size, k_epochs_d, alpha, beta, gamma, out_dir, noise_size=(1,2**15)):
+def train_model( lr, epochs, batch_size, k_epochs_d, k_epochs_g, alpha, beta, gamma, data_type, data_stride, out_dir, noise_size=(1,2**15)):
     
     # alpha serves as the parameter in the generator regularization loss
     alpha_comp = 1 - alpha
@@ -38,7 +44,7 @@ def train_model( lr, epochs, batch_size, k_epochs_d, alpha, beta, gamma, out_dir
     generator = CNNGenerator().to(device)
     generator = generator.apply(nn_d.weights_init)
 
-    discriminator = nn_d.Discriminator().to(device)
+    discriminator = Discriminator().to(device)
     discriminator = discriminator.apply(nn_d.weights_init)
 
     # define loss and optimizers
@@ -48,11 +54,12 @@ def train_model( lr, epochs, batch_size, k_epochs_d, alpha, beta, gamma, out_dir
     optim_g = torch.optim.Adam(generator.parameters(),lr= lr, betas=(0.5, 0.999))
 
     # Train dataset 
-    data_train = torch.Tensor(np.load('./data/data.npy')) # Nsamples x L (L: length)
-    data_samples = data_train.size()[0]
-    data_len = data_train.size()[1]
+    # data_train = torch.Tensor(np.load('./data/data.npy')) # Nsamples x L (L: length)
+    # train_set = dl.DatasetCustom(data_train)
+    # data_samples = data_train.size()[0]
+    # data_len = data_train.size()[1]
 
-    train_set = dl.DatasetCustom(data_train)
+    train_set, data_samples, data_len = dl.loadDataset(type=data_type, stride=data_stride)
     train_loader = DataLoader(train_set, batch_size=batch_size, num_workers = 0, shuffle = True, drop_last=False)
 
     loss_d_fake_array = torch.zeros((epochs))
@@ -77,9 +84,9 @@ def train_model( lr, epochs, batch_size, k_epochs_d, alpha, beta, gamma, out_dir
     scales=scales[0:100]
     
     # s2 = ut.calculate_s2(torch.cumsum(data_train[:,None,:], dim=2), scales, device=device)
-    s2 = ut.calculate_s2(data_train[:,None,:], scales, device=device)
-    mean_s2 = torch.mean(s2, dim=[0,1]) # This gives the s2 tensor of size (len(scales))
-    mean_s2 = mean_s2[None, None, :] 
+    # s2 = ut.calculate_s2(data_train[:,None,:], scales, device=device)
+    # mean_s2 = torch.mean(s2, dim=[0,1]) # This gives the s2 tensor of size (len(scales))
+    # mean_s2 = mean_s2[None, None, :] 
 
     # Take the target ones and zeros for the batch size and for the last (not complete batch)
 
@@ -103,12 +110,13 @@ def train_model( lr, epochs, batch_size, k_epochs_d, alpha, beta, gamma, out_dir
             batch_size_ = data_.shape[0]
 
             ## TRAIN DISCRIMINATOR
-            for k in range(k_epochs_d):
+            for kd in range(k_epochs_d):
                 discriminator.zero_grad()
                 
                 # optim_d.zero_grad()
                 ## True samples
                 pred_real = discriminator(data_)
+                
                 loss_real = criterion_BCE(pred_real, target_ones[batch_idx == last_batch_idx])
 
                 ## False samples (Create random noise and run the generator on them)
@@ -138,47 +146,62 @@ def train_model( lr, epochs, batch_size, k_epochs_d, alpha, beta, gamma, out_dir
             acc_d_fake_array[epoch] += torch.sum(pred_fake < 0.5).item()
             acc_d_real_array[epoch] += torch.sum(pred_real >= 0.5).item()
 
-            #optim_g.zero_grad()
-            ## TRAIN GENERATOR
-            generator.zero_grad()
+            for kg in range(k_epochs_g):
+                    
+                #optim_g.zero_grad()
+                ## TRAIN GENERATOR
+                generator.zero_grad()
 
-            noise = torch.randn((batch_size_, noise_size[0], noise_size[1]), device=device)
-            generated_signal = generator(noise) 
-            # Cut samples (no)
-            
-            classifications = discriminator(generated_signal)
-            loss_g = criterion_BCE(classifications, target_ones[batch_idx == last_batch_idx])
+                noise = torch.randn((batch_size_, noise_size[0], noise_size[1]), device=device)
+                generated_signal = generator(noise) 
+                # Cut samples (no)
+                
+                classifications = discriminator(generated_signal)
+                loss_g = criterion_BCE(classifications, target_ones[batch_idx == last_batch_idx])
 
-            # E [( X * cumsum(Z) ) ^2]
-            # loss_reg = torch.mean(torch.square(torch.mul(noise,torch.cumsum(generated_signal, dim=2))))
-            # E[X * cumusm(z)]
-            # loss_reg = torch.mean(torch.mul(noise,torch.cumsum(generated_signal, dim=2)))
-            # E[Z]^2
-            # loss_reg = torch.square(torch.mean(generated_signal) * batch_size_)
-            
-            # Structure function loss
-            # Broadcast s2 into all structure function estimations
-            # generated_s2 = ut.calculate_s2(torch.cumsum(generated_signal,dim=2), scales, device=device)
-            # loss_reg = criterion_MSE(generated_s2, mean_s2)
-            
-            # loss_gen = beta * ( alpha_comp * loss_g + alpha *  loss_reg )
-            
-            loss_gen = beta * loss_g
+                # E [( X * cumsum(Z) ) ^2]
+                # loss_reg = torch.mean(torch.square(torch.mul(noise,torch.cumsum(generated_signal, dim=2))))
+                # E[X * cumusm(z)]
+                # loss_reg = torch.mean(torch.mul(noise,torch.cumsum(generated_signal, dim=2)))
+                # E[Z]^2
+                # loss_reg = torch.square(torch.mean(generated_signal) * batch_size_)
+                
+                # Structure function loss
+                # Broadcast s2 into all structure function estimations
+                # generated_s2 = ut.calculate_s2(torch.cumsum(generated_signal,dim=2), scales, device=device)
+                # loss_reg = criterion_MSE(generated_s2, mean_s2)
+                
+                # loss_gen = beta * ( alpha_comp * loss_g + alpha *  loss_reg )
+                
+                loss_gen = beta * loss_g
 
-            loss_gen_array[epoch] += loss_gen.item()
-            # loss_reg_array[epoch] += loss_reg.item()
-            loss_g_array[epoch] += loss_g.item()
+                loss_gen.backward()
+                optim_g.step()
 
-            loss_gen.backward()
-            optim_g.step()
+                loss_gen_array[epoch] += loss_gen.item() / k_epochs_g
+                # loss_reg_array[epoch] += loss_reg.item()
+                loss_g_array[epoch] += loss_g.item() / k_epochs_g
+
 
         # THESE HAVE TO BE DEVIDED BY THE NUMBER OF BATCHES
         acc_d_fake_array[epoch] = acc_d_fake_array[epoch] / data_samples
         acc_d_real_array[epoch] = acc_d_real_array[epoch] / data_samples
 
-        if epoch%1 == 0:
+        if epoch%5 == 0:
             print('Epoch [{}/{}] -\t Generator Loss: {:7.4f} \t/\t\t Discriminator Loss: {:7.4f} || acc(fake): {:7.4f} , acc(real): {:7.4f} ||'.format(epoch+1, epochs, loss_gen_array[epoch], loss_d_array[epoch], acc_d_fake_array[epoch], acc_d_real_array[epoch]))
             print("\t\t\t G: {:7.4f}, reg: {:7.4f} \t\t Fake: {:7.4f}, Real: {:7.4f}".format(loss_g_array[epoch], loss_reg_array[epoch], loss_d_fake_array[epoch], loss_d_real_array[epoch]))
+            sys.stdout.flush()
+
+            if plot_metadata_training:
+                n_samples = 64
+                noise = torch.randn((n_samples, noise_size[0], noise_size[1]), device=device)
+                with torch.no_grad():
+                    generated_samples = generator(noise)
+                    np.savez(out_dir+"/samples_epoch_{:d}.npz".format(epoch), generated_samples.cpu().detach().numpy())
+
+
+
+            
 
     end_time = time()
     print("Total time elapsed for training:", end_time - start_time)
@@ -204,37 +227,45 @@ def train_model( lr, epochs, batch_size, k_epochs_d, alpha, beta, gamma, out_dir
     torch.save(discriminator.state_dict(), out_dir + '/discriminator.pt')
 
     with open( os.path.join(out_dir, "time.txt"), "w") as f:
-        f.write("\nTotal time to train in seconds: {:f}".format(end_time - start_time))
+        f.write("Total time to train in seconds: {:f}".format(end_time - start_time))
     
     return 
 
 if __name__ == '__main__':
     lr = 0.002
-    epochs = 500
-    batch_size = 32
-    k_epochs_d = 3
-    
+    epochs = 200
+    batch_size = 8
+    k_epochs_d = 2
+    k_epochs_g = 1
+
     out_dir = './generated'
     alpha = 0.0 # regularization parameter
     beta = 0.5 # generator loss multiplier
-    gamma = 2.0 # discriminator loss multiplier
-    
-    # out_dir = ut.get_dir(out_dir)
-    # print(out_dir)
-    out_dir = os.path.join(out_dir, 'LdovFU')
+    gamma = 3.0 # discriminator loss multiplier
+    edge = -1 # Deprecreated
+
+    data_type = "full"
+    data_stride = 2**15 // 2
+
+    out_dir = ut.get_dir(out_dir)
+    print(out_dir)
+    # out_dir = os.path.join(out_dir, 'GjUldu')
 
     meta_dict = {
         "lr":lr,
         "epochs":epochs,
         "batch_size":batch_size,
         "k_epochs_d":k_epochs_d,
+        "k_epochs_g":k_epochs_g,
         "out_dir":out_dir,
         "alpha":alpha,
         "beta":beta,
-        "gamma":gamma
+        "gamma":gamma,
+        "data_type_loading":data_type,
+        "data_type_stride":data_stride
     }
 
     ut.save_meta(meta_dict, out_dir)
-    train_model(lr, epochs, batch_size, k_epochs_d, alpha, beta, gamma, out_dir)
+    train_model(lr, epochs, batch_size, k_epochs_d, k_epochs_g, alpha, beta, gamma, data_type, data_stride, out_dir)
 
 
