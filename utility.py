@@ -57,8 +57,8 @@ def calculate_structure(signal, scales, device="cpu"):
 
 
 # Device has to be cpu since histogram is not yet implemented on CUDA
-def calculate_histogram(signal, scales, n_bins, device="cpu"):
-    if not (device is "cpu"):
+def calculate_histogram(signal, scales, n_bins, device="cpu", normalize_incrs=True):
+    if device != "cpu":
         return 
     Nreal=signal.size()[0]
 
@@ -70,7 +70,12 @@ def calculate_histogram(signal, scales, n_bins, device="cpu"):
         tmp[ir,0,:] = (signal[ir]-torch.nanmean(signal[ir]))/nanstdtmp   
 
     for idx, scale in enumerate(scales):
-        incrs = tmp[:,0,scale:]-tmp[:,0,:-scale]
+        incrs = tmp[:,0,scale:]-tmp[:,0,:-scale] # Incrs is Nbatch x L 
+
+        if normalize_incrs:
+            incrs= torch.div( (incrs - torch.mean(incrs,axis=1)[:,None] ), torch.std(incrs,axis=0))
+
+
         histograms[idx, :], bins = torch.histogram(incrs, n_bins, density=True)
 
     return histograms, bins
