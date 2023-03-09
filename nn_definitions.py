@@ -95,58 +95,7 @@ class Generator(nn.Module):
         x = self.convT_layers[2](torch.add(x, res2))
         x = self.convT_layers[3](torch.add(x, res1))
         """
-        
-class Discriminator(nn.Module):
-    def __init__(self):
-        super().__init__()
-    
-        self.cnn = nn.Sequential(
-            nn.Conv1d(1, 4, kernel_size = 8, stride = 4, padding = 0, bias = False),
-            nn.BatchNorm1d(4),
-            nn.LeakyReLU(0.2, inplace=False),
-
-            nn.Conv1d(4, 8, kernel_size = 8, stride = 4, padding = 0, bias = False),
-            nn.BatchNorm1d(8),
-            nn.LeakyReLU(0.2, inplace=False),
-
-            nn.Conv1d(8, 16, kernel_size = 5, stride = 3, padding = 0, bias = False),
-            nn.BatchNorm1d(16),
-            nn.LeakyReLU(0.2, inplace=False),
-
-            nn.Conv1d(16, 16, kernel_size = 5, stride = 2, padding = 0, bias = False),
-            nn.BatchNorm1d(16),
-            nn.LeakyReLU(0.2, inplace=False),
-
-            nn.Conv1d(16, 32, kernel_size = 5, stride = 2, padding = 0, bias = False),
-            nn.BatchNorm1d(32),
-            nn.LeakyReLU(0.2, inplace=False),
-
-            nn.Conv1d(32, 64, kernel_size = 3, stride = 2, padding = 0, bias = False),
-            nn.BatchNorm1d(64),
-            nn.LeakyReLU(0.2, inplace=False),
-
-            nn.Conv1d(64, 64, kernel_size = 3, stride = 2, padding = 0, bias = False),
-            nn.BatchNorm1d(64),
-            nn.LeakyReLU(0.2, inplace=False),
-
-            nn.Conv1d(64, 64, kernel_size = 3, stride = 2, padding = 0, bias = False),
-            nn.BatchNorm1d(64),
-            nn.LeakyReLU(0.2, inplace=False),
-
-            nn.Flatten(),
-            
-            nn.Linear(64*20, 64),
-            nn.LeakyReLU(0.2),
-
-            nn.Linear(64, 1),
-            nn.Sigmoid()
-        )
-        
-    def forward(self, x):
-        
-        #out = out.squeeze(1)
-        return self.cnn(x)
-
+  
 def weights_init(m):
     """
     This function initializes the model weights randomly from a 
