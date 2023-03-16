@@ -8,7 +8,7 @@ def loadDataset(type="full", stride=None, len_samples = 2**15):
         data_train = torch.Tensor(np.load('./data/full_signal.npy'))
         dataset = DatasetCustomFull(data_train, stride, len_samples=len_samples)
         n_samples = dataset.n_samples
-    elif type == "devided":
+    elif type == "segmented":
         data_train = torch.Tensor(np.load('./data/data.npy'))
         dataset = DatasetCustom(data_train)
         n_samples = dataset.n_samples
