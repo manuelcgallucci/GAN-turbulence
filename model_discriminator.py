@@ -328,6 +328,34 @@ class DiscriminatorMultiNet(nn.Module):
 
         return self.endDense(out)
 
+class DiscriminatorStructures(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.dense_output = nn.Sequential(
+            
+            nn.Linear(100, 64),
+			nn.LeakyReLU(0.2),
+
+            nn.Linear(64, 64),
+			nn.LeakyReLU(0.2),
+
+            nn.Linear(64, 64),
+			nn.LeakyReLU(0.2),
+
+            nn.Linear(64, 64),
+			nn.LeakyReLU(0.2),
+
+            nn.Linear(64, 32),
+			nn.LeakyReLU(0.2),
+
+			nn.Linear(32, 1),
+            nn.Sigmoid()
+		)
+        
+    def forward(self, x):
+        return self.dense_output(x)
+    
+
 class DiscriminatorMultiNet16_4(nn.Module):
     def __init__(self):
         super().__init__()
