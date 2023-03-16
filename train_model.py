@@ -20,13 +20,15 @@ import nn_definitions as nn_d
 import utility as ut
 # CNNGeneratorBCNocnn1
 from model_generator import CNNGeneratorBigConcat as CNNGenerator
-from model_discriminator import DiscriminatorMultiNetNo512 as Discriminator
+from model_discriminator import DiscriminatorMultiNet16_4 as Discriminator
 
-# DiscriminatorMultiNetWeightedAvg DiscriminatorMultiNetNo512
+# DiscriminatorMultiNetWeightedAvg DiscriminatorMultiNetNo512 DiscriminatorMultiNet16_4
+
 plot_metadata_training = True
+
 # nohup python3 train_model.py > nohup_1.out &
 
-def train_model( lr, epochs, batch_size, k_epochs_d, k_epochs_g, alpha, beta, gamma, data_type, data_stride, out_dir, noise_size=(1,2**15)):
+def train_model( lr, epochs, batch_size, k_epochs_d, k_epochs_g, alpha, beta, gamma, data_type, data_stride, len_samples,out_dir, noise_size=(1,2**15)):
     
     # alpha serves as the parameter in the generator regularization loss
     alpha_comp = 1 - alpha
@@ -59,7 +61,7 @@ def train_model( lr, epochs, batch_size, k_epochs_d, k_epochs_g, alpha, beta, ga
     # data_samples = data_train.size()[0]
     # data_len = data_train.size()[1]
 
-    train_set, data_samples, data_len = dl.loadDataset(type=data_type, stride=data_stride)
+    train_set, data_samples, data_len = dl.loadDataset(type=data_type, stride=data_stride, len_samples=len_samples)
     train_loader = DataLoader(train_set, batch_size=batch_size, num_workers = 0, shuffle = True, drop_last=False)
 
     loss_d_fake_array = torch.zeros((epochs))
@@ -231,26 +233,28 @@ def train_model( lr, epochs, batch_size, k_epochs_d, k_epochs_g, alpha, beta, ga
     
     return 
 
+# nohup python3 train_model.py > nohup_1.out &
 if __name__ == '__main__':
     lr = 0.002
-    epochs = 200
-    batch_size = 8
+    epochs = 150
+    batch_size = 4
     k_epochs_d = 2
     k_epochs_g = 1
 
     out_dir = './generated'
     alpha = 0.0 # regularization parameter
-    beta = 0.5 # generator loss multiplier
-    gamma = 3.0 # discriminator loss multiplier
+    beta = 1.0 # generator loss multiplier
+    gamma = 1.0 # discriminator loss multiplier
     edge = -1 # Deprecreated
 
-    data_type = "full"
-    data_stride = 2**15 // 2
-
+    data_type = "full" # full samples from the original data 
+    data_stride = 2**15
+    len_samples = 2**15
+    
     out_dir = ut.get_dir(out_dir)
-    print(out_dir)
-    # out_dir = os.path.join(out_dir, 'GjUldu')
+    # out_dir = os.path.join(out_dir, 'IBRQ0T')
 
+    print(out_dir)
     meta_dict = {
         "lr":lr,
         "epochs":epochs,
@@ -262,10 +266,11 @@ if __name__ == '__main__':
         "beta":beta,
         "gamma":gamma,
         "data_type_loading":data_type,
-        "data_type_stride":data_stride
+        "data_type_stride":data_stride,
+        "len_samples":len_samples
     }
 
     ut.save_meta(meta_dict, out_dir)
-    train_model(lr, epochs, batch_size, k_epochs_d, k_epochs_g, alpha, beta, gamma, data_type, data_stride, out_dir)
+    train_model(lr, epochs, batch_size, k_epochs_d, k_epochs_g, alpha, beta, gamma, data_type, data_stride, len_samples, out_dir)
 
 

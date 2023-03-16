@@ -28,12 +28,18 @@ plot_metadata_training = True
 
 # nohup python3 train_model_step_discriminator.py > nohup_1.out &
 
-def calculate_loss(criterion, predictions):
-    
+def calculate_loss(criterion, predictions, target, weights, n_weights, device):
+    loss = torch.zeros((1), device=device)
+    for k in range(n_weights):
+        loss += weights[k] * criterion(predictions[:,k], target)
 
+    # Make the predictions 
+    mean_prediction = torch.mean(predictions,dim=1)
+    return loss, mean_prediction
 
-def train_model( lr, epochs, batch_size, k_epochs_d, k_epochs_g, alpha, beta, gamma, data_type, data_stride, len_samples,out_dir, noise_size=(1,2**15)):
+def train_model( lr, epochs, batch_size, k_epochs_d, k_epochs_g, alpha, beta, gamma, weigths, data_type, data_stride, len_samples,out_dir, noise_size=(1,2**15)):
     
+    n_weights = weights.size()[0]
     # alpha serves as the parameter in the generator regularization loss
     alpha_comp = 1 - alpha
     # beta serves as the multiplier for the total generator loss
@@ -96,12 +102,12 @@ def train_model( lr, epochs, batch_size, k_epochs_d, k_epochs_g, alpha, beta, ga
 
     # Take the target ones and zeros for the batch size and for the last (not complete batch)
 
-    target_ones_full = torch.ones((batch_size, 1), device=device)
-    target_ones_partial = torch.ones((data_samples - batch_size * int(data_samples / batch_size), 1), device=device)
+    target_ones_full = torch.ones((batch_size), device=device)
+    target_ones_partial = torch.ones((data_samples - batch_size * int(data_samples / batch_size)), device=device)
     target_ones = [target_ones_full, target_ones_partial]
 
-    target_zeros_full = torch.zeros((batch_size, 1), device=device)
-    target_zeros_partial = torch.ones((data_samples - batch_size * int(data_samples / batch_size), 1), device=device)
+    target_zeros_full = torch.zeros((batch_size), device=device)
+    target_zeros_partial = torch.ones((data_samples - batch_size * int(data_samples / batch_size)), device=device)
     target_zeros = [target_zeros_full, target_zeros_partial]
     
     last_batch_idx = np.ceil(data_samples / batch_size) - 1
@@ -123,32 +129,9 @@ def train_model( lr, epochs, batch_size, k_epochs_d, k_epochs_g, alpha, beta, ga
                 ## True samples
                 # p16384_0, p16384_1, p8192_0, p8192_1, p8192_2, p8192_3, p4096_0, p4096_1, p4096_2, p4096_3, p4096_4, p4096_5, p4096_6, p4096_7 = discriminator(data_)
                 # p16384_0, p16384_1 = discriminator(data_)
+                predictions = discriminator(data_)
+                loss_real, mean_prediction_real = calculate_loss(criterion_BCE, predictions, target_ones[int(batch_idx == last_batch_idx)], weights, n_weights, device)
                 
-                l16384_0_real = criterion_BCE(p16384_0, target_ones[int(batch_idx == last_batch_idx)])
-                l16384_1_real = criterion_BCE(p16384_1, target_ones[int(batch_idx == last_batch_idx)])
-
-                l8192_0_real = criterion_BCE(p8192_0, target_ones[int(batch_idx == last_batch_idx)])
-                l8192_1_real = criterion_BCE(p8192_1, target_ones[int(batch_idx == last_batch_idx)])
-                l8192_2_real = criterion_BCE(p8192_2, target_ones[int(batch_idx == last_batch_idx)])
-                l8192_3_real = criterion_BCE(p8192_3, target_ones[int(batch_idx == last_batch_idx)])
-
-                l4096_0_real = criterion_BCE(p4096_0, target_ones[int(batch_idx == last_batch_idx)])
-                l4096_1_real = criterion_BCE(p4096_1, target_ones[int(batch_idx == last_batch_idx)])
-                l4096_2_real = criterion_BCE(p4096_2, target_ones[int(batch_idx == last_batch_idx)])
-                l4096_3_real = criterion_BCE(p4096_3, target_ones[int(batch_idx == last_batch_idx)])
-                l4096_4_real = criterion_BCE(p4096_4, target_ones[int(batch_idx == last_batch_idx)])
-                l4096_5_real = criterion_BCE(p4096_5, target_ones[int(batch_idx == last_batch_idx)])
-                l4096_6_real = criterion_BCE(p4096_6, target_ones[int(batch_idx == last_batch_idx)])
-                l4096_7_real = criterion_BCE(p4096_7, target_ones[int(batch_idx == last_batch_idx)]) 
-
-                loss_real = 1.0 * (l16384_0_real + l16384_1_real) + \
-                    0.5 * (l8192_0_real + l8192_1_real + l8192_2_real + l8192_3_real) + \
-                    0.25 * (l4096_0_real + l4096_1_real + l4096_2_real + l4096_3_real + l4096_4_real + l4096_5_real + l4096_6_real + l4096_7_real)
-
-                # # Make the real predictions 
-                concatenated_predictions = torch.cat((p16384_0, p16384_1, p8192_0, p8192_1, p8192_2, p8192_3, p4096_0, p4096_1, p4096_2, p4096_3, p4096_4, p4096_5, p4096_6, p4096_7),dim=1)
-                mean_prediction_real = torch.mean(concatenated_predictions,dim=1)
-
                 # loss_real = 1.0 * (l16384_0_real + l16384_1_real)
                 # concatenated_predictions = torch.cat((p16384_0, p16384_1),dim=1)
                 # mean_prediction_real = torch.mean(concatenated_predictions,dim=1)
@@ -159,38 +142,9 @@ def train_model( lr, epochs, batch_size, k_epochs_d, k_epochs_g, alpha, beta, ga
                     fake_samples = generator(noise)
                                     
                 # Fake samples
-                p16384_0, p16384_1, p8192_0, p8192_1, p8192_2, p8192_3, p4096_0, p4096_1, p4096_2, p4096_3, p4096_4, p4096_5, p4096_6, p4096_7 = discriminator(fake_samples)
-                # p16384_0, p16384_1 = discriminator(fake_samples)
-
-                l16384_0_fake = criterion_BCE(p16384_0, target_zeros[int(batch_idx == last_batch_idx)])
-                l16384_1_fake = criterion_BCE(p16384_1, target_zeros[int(batch_idx == last_batch_idx)])
-
-                l8192_0_fake = criterion_BCE(p8192_0, target_zeros[int(batch_idx == last_batch_idx)])
-                l8192_1_fake = criterion_BCE(p8192_1, target_zeros[int(batch_idx == last_batch_idx)])
-                l8192_2_fake = criterion_BCE(p8192_2, target_zeros[int(batch_idx == last_batch_idx)])
-                l8192_3_fake = criterion_BCE(p8192_3, target_zeros[int(batch_idx == last_batch_idx)])
-
-                l4096_0_fake = criterion_BCE(p4096_0, target_zeros[int(batch_idx == last_batch_idx)])
-                l4096_1_fake = criterion_BCE(p4096_1, target_zeros[int(batch_idx == last_batch_idx)])
-                l4096_2_fake = criterion_BCE(p4096_2, target_zeros[int(batch_idx == last_batch_idx)])
-                l4096_3_fake = criterion_BCE(p4096_3, target_zeros[int(batch_idx == last_batch_idx)])
-                l4096_4_fake = criterion_BCE(p4096_4, target_zeros[int(batch_idx == last_batch_idx)])
-                l4096_5_fake = criterion_BCE(p4096_5, target_zeros[int(batch_idx == last_batch_idx)])
-                l4096_6_fake = criterion_BCE(p4096_6, target_zeros[int(batch_idx == last_batch_idx)])
-                l4096_7_fake = criterion_BCE(p4096_7, target_zeros[int(batch_idx == last_batch_idx)]) 
-
-                loss_fake = 1.0 * (l16384_0_fake + l16384_1_fake) + \
-                    0.5 * (l8192_0_fake + l8192_1_fake + l8192_2_fake + l8192_3_fake) + \
-                    0.25 * (l4096_0_fake + l4096_1_fake + l4096_2_fake + l4096_3_fake + l4096_4_fake + l4096_5_fake + l4096_6_fake + l4096_7_fake)
-
-                # Make the fake predictions 
-                concatenated_predictions = torch.cat((p16384_0, p16384_1, p8192_0, p8192_1, p8192_2, p8192_3, p4096_0, p4096_1, p4096_2, p4096_3, p4096_4, p4096_5, p4096_6, p4096_7),dim=1)
-                mean_prediction_fake = torch.mean(concatenated_predictions,dim=1)
-
-                # loss_fake =  1.0 * (l16384_0_fake + l16384_1_fake)
-                # concatenated_predictions = torch.cat((p16384_0, p16384_1),dim=1)
-                # mean_prediction_fake = torch.mean(concatenated_predictions,dim=1)
-
+                predictions = discriminator(fake_samples)
+                loss_fake, mean_prediction_fake = calculate_loss(criterion_BCE, predictions, target_zeros[int(batch_idx == last_batch_idx)], weights, n_weights, device)
+                
                 # Combine the losses 
                 loss_d = gamma * (loss_real + loss_fake) / 2
                 
@@ -223,32 +177,9 @@ def train_model( lr, epochs, batch_size, k_epochs_d, k_epochs_g, alpha, beta, ga
                 generated_signal = generator(noise) 
                 # Cut samples (no)
 
-                # Run discrimnators on the samples
-                p16384_0, p16384_1, p8192_0, p8192_1, p8192_2, p8192_3, p4096_0, p4096_1, p4096_2, p4096_3, p4096_4, p4096_5, p4096_6, p4096_7 = discriminator(generated_signal)
-                # p16384_0, p16384_1 = discriminator(generated_signal)                
-
-                l16384_0_g = criterion_BCE(p16384_0, target_ones[int(batch_idx == last_batch_idx)])
-                l16384_1_g = criterion_BCE(p16384_1, target_ones[int(batch_idx == last_batch_idx)])
-
-                l8192_0_g = criterion_BCE(p8192_0, target_ones[int(batch_idx == last_batch_idx)])
-                l8192_1_g = criterion_BCE(p8192_1, target_ones[int(batch_idx == last_batch_idx)])
-                l8192_2_g = criterion_BCE(p8192_2, target_ones[int(batch_idx == last_batch_idx)])
-                l8192_3_g = criterion_BCE(p8192_3, target_ones[int(batch_idx == last_batch_idx)])
-
-                l4096_0_g = criterion_BCE(p4096_0, target_ones[int(batch_idx == last_batch_idx)])
-                l4096_1_g = criterion_BCE(p4096_1, target_ones[int(batch_idx == last_batch_idx)])
-                l4096_2_g = criterion_BCE(p4096_2, target_ones[int(batch_idx == last_batch_idx)])
-                l4096_3_g = criterion_BCE(p4096_3, target_ones[int(batch_idx == last_batch_idx)])
-                l4096_4_g = criterion_BCE(p4096_4, target_ones[int(batch_idx == last_batch_idx)])
-                l4096_5_g = criterion_BCE(p4096_5, target_ones[int(batch_idx == last_batch_idx)])
-                l4096_6_g = criterion_BCE(p4096_6, target_ones[int(batch_idx == last_batch_idx)])
-                l4096_7_g = criterion_BCE(p4096_7, target_ones[int(batch_idx == last_batch_idx)]) 
-
-                loss_g = 1.0 * (l16384_0_g + l16384_1_g) + \
-                    0.5 * (l8192_0_g + l8192_1_g + l8192_2_g + l8192_3_g) + \
-                    0.25 * (l4096_0_g + l4096_1_g + l4096_2_g + l4096_3_g + l4096_4_g + l4096_5_g + l4096_6_g + l4096_7_g)
-                
-                # loss_g = 1.0 * (l16384_0_g + l16384_1_g)
+                # Fake samples
+                predictions = discriminator(generated_signal)
+                loss_g, mean_predictions_g = calculate_loss(criterion_BCE, predictions, target_ones[int(batch_idx == last_batch_idx)], weights, n_weights, device)
                 
                 # E [( X * cumsum(Z) ) ^2]
                 # loss_reg = torch.mean(torch.square(torch.mul(noise,torch.cumsum(generated_signal, dim=2))))
@@ -263,7 +194,6 @@ def train_model( lr, epochs, batch_size, k_epochs_d, k_epochs_g, alpha, beta, ga
                 # loss_reg = criterion_MSE(generated_s2, mean_s2)
                 
                 # loss_gen = beta * ( alpha_comp * loss_g + alpha *  loss_reg )
-
 
                 loss_gen = beta * loss_g
 
@@ -322,8 +252,8 @@ def train_model( lr, epochs, batch_size, k_epochs_d, k_epochs_g, alpha, beta, ga
 # nohup python3 train_model.py > nohup_1.out &
 if __name__ == '__main__':
     lr = 0.002
-    epochs = 150
-    batch_size = 4
+    epochs = 250
+    batch_size = 16
     k_epochs_d = 2
     k_epochs_g = 1
 
@@ -338,9 +268,11 @@ if __name__ == '__main__':
     len_samples = 2**15
     
     # out_dir = ut.get_dir(out_dir)
-    out_dir = os.path.join(out_dir, '4bsV4j')
-
+    out_dir = os.path.join(out_dir, 'lkfQq8')
+    
+    weights = torch.Tensor([1,1,0.5,0.5,0.5,0.5,0.25,0.25,0.25,0.25,0.25,0.25,0.25,0.25])
     print(out_dir)
+
     meta_dict = {
         "lr":lr,
         "epochs":epochs,
@@ -351,6 +283,7 @@ if __name__ == '__main__':
         "alpha":alpha,
         "beta":beta,
         "gamma":gamma,
+        "weights":weights,
         "data_type_loading":data_type,
         "data_type_stride":data_stride,
         "len_samples":len_samples,
@@ -358,6 +291,6 @@ if __name__ == '__main__':
     }
 
     ut.save_meta(meta_dict, out_dir)
-    train_model(lr, epochs, batch_size, k_epochs_d, k_epochs_g, alpha, beta, gamma, data_type, data_stride, len_samples, out_dir)
+    train_model(lr, epochs, batch_size, k_epochs_d, k_epochs_g, alpha, beta, gamma, weights, data_type, data_stride, len_samples, out_dir)
 
 
