@@ -1,4 +1,4 @@
-import torch
+#622A2A#FFFFFFimport torch
 import numpy as np 
 import matplotlib.pyplot as plt
 
@@ -12,7 +12,7 @@ import utility as ut
 from model_generator import CNNGeneratorBigConcat as CNNGenerator
 from model_discriminator import DiscriminatorMultiNet16 as Discriminator
 #data_dir = './generated/U2lVlk/'
-data_dir = "./generated/vHnyyl/"
+data_dir = "./generated/hEpAZm/"
 temp_dir = "./temp/"
 save = True
 display = False
@@ -20,9 +20,9 @@ display = False
 def main():
     # plot_real_data()
     
+    plot_history_structureTraining()
     # plot_history()
     # plot_samples()
-    plot_history_structureTraining()
     # plot_training_samples(eta=5, L=2350)
     # plot_compare_structure(eta=5, L=2350, len_=2**16)
     # plot_histogram(n_samples=64, len_=2**16, scales=[2,4,8,16,128,256,1024,4096,8192,16384])
@@ -114,57 +114,69 @@ def plot_training_samples(max_plot=10, mspf=400, n_loop=1, eta=5, L=2350, device
 
 def plot_history_structureTraining():
 
-    history = np.load(data_dir + 'metaEvo.npz')
+	history = np.load(data_dir + 'metaEvo.npz')
 
-    plt.figure()
-    plt.plot(history["loss_fake"])
-    plt.plot(history["loss_fake_s2"])
-    plt.plot(history["loss_fake_skewness"])
-    plt.plot(history["loss_fake_flatness"])
-    plt.plot(history["loss_fake_total"])
-    plt.title("Losses of Discriminator fake samples")
-    plt.legend(["Samples", "S2", "skewnnes", "Flatness", "Total"])
-    if save: plt.savefig(data_dir + "loss_discriminator_fake.png")
-    if display: plt.show()
+	plt.figure()
+	plt.plot(history["loss_fake"])
+	plt.plot(history["loss_fake_s2"])
+	plt.plot(history["loss_fake_skewness"])
+	plt.plot(history["loss_fake_flatness"])
+	plt.plot(history["loss_fake_total"])
+	plt.title("Losses of Discriminator fake samples")
+	plt.legend(["Samples", "S2", "skewnnes", "Flatness", "Total"])
+	if save: plt.savefig(data_dir + "loss_discriminator_fake.png")
+	if display: plt.show()
 
-    plt.figure()
-    plt.plot(history["loss_real"])
-    plt.plot(history["loss_real_s2"])
-    plt.plot(history["loss_real_skewness"])
-    plt.plot(history["loss_real_flatness"])
-    plt.plot(history["loss_real_total"])
-    plt.title("Losses of Discriminator real samples")
-    plt.legend(["Samples", "S2", "skewnnes", "Flatness", "Total"])
-    if save: plt.savefig(data_dir + "loss_discriminator_real.png")
-    if display: plt.show()
+	plt.figure()
+	plt.plot(history["loss_real"])
+	plt.plot(history["loss_real_s2"])
+	plt.plot(history["loss_real_skewness"])
+	plt.plot(history["loss_real_flatness"])
+	plt.plot(history["loss_real_total"])
+	plt.title("Losses of Discriminator real samples")
+	plt.legend(["Samples", "S2", "skewnnes", "Flatness", "Total"])
+	if save: plt.savefig(data_dir + "loss_discriminator_real.png")
+	if display: plt.show()
 
-    plt.figure()
-    plt.plot(history["loss_g"])
-    plt.plot(history["loss_g_s2"])
-    plt.plot(history["loss_g_skewness"])
-    plt.plot(history["loss_g_flatness"])
-    plt.plot(history["loss_g_total"])
-    plt.title("Losses of Generator samples")
-    plt.legend(["Samples", "S2", "skewnnes", "Flatness", "Total"])
-    if save: plt.savefig(data_dir + "loss_generator.png")
-    if display: plt.show()
+	plt.figure()
+	plt.plot(history["loss_real_s2"])
+	plt.plot(history["loss_real_skewness"])
+	plt.plot(history["loss_real_flatness"])
+	plt.plot(history["loss_fake_s2"])
+	plt.plot(history["loss_fake_skewness"])
+	plt.plot(history["loss_fake_flatness"])
+	plt.title("Losses of Discriminator in structure functions")
+	plt.legend(["real_S2", "real_skewnnes", "real_Flatness", "fake_S2", "fake_skewnnes", "fake_Flatness"])
+	if save: plt.savefig(data_dir + "loss_discriminator_structures.png")
+	if display: plt.show()
 
-    plt.figure()
-    plt.plot(history["loss_real_total"])
-    plt.plot(history["loss_fake_total"])
-    plt.plot(history["loss_discriminator"])
-    plt.title("Losses of Discriminator")
-    plt.legend(["Real", "Fake", "Total"])
-    if save: plt.savefig(data_dir + "loss_discriminator.png")
-    if display: plt.show()
+	plt.figure()
+	plt.plot(history["loss_g"])
+	plt.plot(history["loss_g_s2"])
+	plt.plot(history["loss_g_skewness"])
+	plt.plot(history["loss_g_flatness"])
+	plt.plot(history["loss_g_total"])
+	plt.title("Losses of Generator samples")
+	plt.legend(["Samples", "S2", "skewnnes", "Flatness", "Total"])
+	if save: plt.savefig(data_dir + "loss_generator.png")
+	if display: plt.show()
 
-    plt.figure()
-    plt.plot(history["loss_generator"])
-    plt.plot(history["loss_discriminator"])
-    plt.title("Losses of the models")
-    plt.legend(["Generator", "Discriminator"])
-    if save: plt.savefig(data_dir + "losses.png")
-    if display: plt.show()
+	plt.figure()
+	plt.plot(history["loss_real_total"])
+	plt.plot(history["loss_fake_total"])
+	plt.plot(history["loss_discriminator"])
+	plt.title("Losses of Discriminator")
+	plt.legend(["Real", "Fake", "Total"])
+	if save: plt.savefig(data_dir + "loss_discriminator.png")
+	if display: plt.show()
+
+	plt.figure()
+	plt.plot(history["loss_generator"])
+	plt.plot(history["loss_discriminator"])
+	plt.title("Losses of the models")
+	plt.legend(["Generator", "Discriminator"])
+	if save: plt.savefig(data_dir + "losses.png")
+	if display: plt.show()
 
 def plot_history():
 
@@ -312,7 +324,7 @@ def plot_compare_structure(n_samples=64, len_=2**15, edge=4096, eta=None, L=None
     struct_std_generate = torch.std(struct[:,:,:], dim=0).cpu()
 
     # TODO correct the data trin so this is not needed anymore
-    data_train = np.flip(data_train, axis=1).copy()
+    # data_train = np.flip(data_train, axis=1).copy()
     struct = ut.calculate_structure(torch.Tensor(data_train[:,None,:]), scales, device=device)
     struct_mean_real = torch.mean(struct[:,:,:], dim=0).cpu()
     struct_std_real = torch.std(struct[:,:,:], dim=0).cpu()
