@@ -118,14 +118,6 @@ def train_model( lr, epochs, batch_size, k_epochs_d, k_epochs_g, alpha, beta, ga
     optim_dskewness.zero_grad()
     optim_dflatness.zero_grad()
 
-    # Pre-calculate the structure function for dataset
-    # Use the average to compare 
-    # Definition of the scales of analysis
-    nv=10
-    uu=2**np.arange(0,13,1/nv)
-    scales=np.unique(uu.astype(int))
-    scales=scales[0:100]
-    
     # Take the target ones and zeros for the batch size and for the last (not complete batch)
     target_ones_full = torch.ones((batch_size), device=device)
     target_ones_partial = torch.ones((data_samples - batch_size * int(data_samples / batch_size)), device=device)
@@ -136,8 +128,22 @@ def train_model( lr, epochs, batch_size, k_epochs_d, k_epochs_g, alpha, beta, ga
     target_zeros = [target_zeros_full, target_zeros_partial]
     
     last_batch_idx = np.ceil(data_samples / batch_size) - 1
-    
-    
+
+    # Pre-calculate the structure function for dataset
+    # Use the average to compare 
+    # Definition of the scales of analysis
+    nv=10
+    uu=2**np.arange(0,13,1/nv)
+    scales=np.unique(uu.astype(int))
+    scales=scales[0:100]
+
+    data_structure_functions = []
+    for _, data_ in enumerate(train_loader):
+        data_ = data_.to(device).float()
+        structure_f = ut.calculate_structure_noInplace(data_, scales, device=device)
+        
+        data_structure_functions.append(structure_f)
+
     torch.autograd.set_detect_anomaly(True)
     
     start_time = time()
@@ -163,12 +169,13 @@ def train_model( lr, epochs, batch_size, k_epochs_d, k_epochs_g, alpha, beta, ga
                 predictions = discriminator(data_)
                 loss_real, mean_prediction_real = calculate_loss(criterion_BCE, predictions, target_ones[int(batch_idx == last_batch_idx)], weights, n_weights, device)
                 
-                structure_f = ut.calculate_structure_noInplace(data_, scales, device=device)
+                structure_f = data_structure_functions[batch_idx]
 
                 loss_real_s2 = criterion_BCE(discriminator_s2(structure_f[:,0,:])[:,0], target_ones[int(batch_idx == last_batch_idx)])
                 loss_real_skewness = criterion_BCE(discriminator_skewness(structure_f[:,1,:])[:,0], target_ones[int(batch_idx == last_batch_idx)])
                 loss_real_flatness = criterion_BCE(discriminator_flatness(structure_f[:,2,:])[:,0], target_ones[int(batch_idx == last_batch_idx)])
                 
+                # loss_real_total = 0.25 * ( loss_real + loss_real_s2 + loss_real_skewness + loss_real_flatness)
                 loss_real_total = 0.25 * ( loss_real + loss_real_s2 + loss_real_skewness + loss_real_flatness)
 
                 ## False samples (Create random noise and run the generator on them)
@@ -186,6 +193,8 @@ def train_model( lr, epochs, batch_size, k_epochs_d, k_epochs_g, alpha, beta, ga
                 loss_fake_skewness = criterion_BCE(discriminator_skewness(structure_f[:,1,:])[:,0], target_zeros[int(batch_idx == last_batch_idx)])
                 loss_fake_flatness = criterion_BCE(discriminator_flatness(structure_f[:,2,:])[:,0], target_zeros[int(batch_idx == last_batch_idx)])
 
+                
+                # loss_fake_total = 0.25 * ( loss_fake + loss_fake_s2 + loss_fake_skewness + loss_fake_flatness)
                 loss_fake_total = 0.25 * ( loss_fake + loss_fake_s2 + loss_fake_skewness + loss_fake_flatness)
 
                 # Combine the losses 
@@ -244,6 +253,7 @@ def train_model( lr, epochs, batch_size, k_epochs_d, k_epochs_g, alpha, beta, ga
                 loss_g_flatness = criterion_BCE(discriminator_flatness(structure_f[:,2,:])[:,0], target_ones[int(batch_idx == last_batch_idx)])
 
                 loss_g_total = 0.25 * (loss_g + loss_g_s2 + loss_g_skewness + loss_g_flatness)
+                # loss_g_total = 0.25 * (loss_g + loss_g_s2 + loss_g_skewness + loss_g_flatness)
 
                 # E [( X * cumsum(Z) ) ^2]
                 # loss_reg = torch.mean(torch.square(torch.mul(noise,torch.cumsum(generated_signal, dim=2))))
