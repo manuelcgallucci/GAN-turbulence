@@ -22,7 +22,8 @@ def main():
     
     # plot_history()
     # plot_samples()
-    plot_training_samples(eta=5, L=2350)
+    plot_history_structureTraining()
+    # plot_training_samples(eta=5, L=2350)
     # plot_compare_structure(eta=5, L=2350, len_=2**16)
     # plot_histogram(n_samples=64, len_=2**16, scales=[2,4,8,16,128,256,1024,4096,8192,16384])
 
@@ -110,6 +111,60 @@ def plot_training_samples(max_plot=10, mspf=400, n_loop=1, eta=5, L=2350, device
     for filename in file_list:
         if 'temp' in filename:
             os.remove(filename)
+
+def plot_history_structureTraining():
+
+    history = np.load(data_dir + 'metaEvo.npz')
+
+    plt.figure()
+    plt.plot(history["loss_fake"])
+    plt.plot(history["loss_fake_s2"])
+    plt.plot(history["loss_fake_skewness"])
+    plt.plot(history["loss_fake_flatness"])
+    plt.plot(history["loss_fake_total"])
+    plt.title("Losses of Discriminator fake samples")
+    plt.legend(["Samples", "S2", "skewnnes", "Flatness", "Total"])
+    if save: plt.savefig(data_dir + "loss_discriminator_fake.png")
+    if display: plt.show()
+
+    plt.figure()
+    plt.plot(history["loss_real"])
+    plt.plot(history["loss_real_s2"])
+    plt.plot(history["loss_real_skewness"])
+    plt.plot(history["loss_real_flatness"])
+    plt.plot(history["loss_real_total"])
+    plt.title("Losses of Discriminator real samples")
+    plt.legend(["Samples", "S2", "skewnnes", "Flatness", "Total"])
+    if save: plt.savefig(data_dir + "loss_discriminator_real.png")
+    if display: plt.show()
+
+    plt.figure()
+    plt.plot(history["loss_g"])
+    plt.plot(history["loss_g_s2"])
+    plt.plot(history["loss_g_skewness"])
+    plt.plot(history["loss_g_flatness"])
+    plt.plot(history["loss_g_total"])
+    plt.title("Losses of Generator samples")
+    plt.legend(["Samples", "S2", "skewnnes", "Flatness", "Total"])
+    if save: plt.savefig(data_dir + "loss_generator.png")
+    if display: plt.show()
+
+    plt.figure()
+    plt.plot(history["loss_real_total"])
+    plt.plot(history["loss_fake_total"])
+    plt.plot(history["loss_discriminator"])
+    plt.title("Losses of Discriminator")
+    plt.legend(["Real", "Fake", "Total"])
+    if save: plt.savefig(data_dir + "loss_discriminator.png")
+    if display: plt.show()
+
+    plt.figure()
+    plt.plot(history["loss_generator"])
+    plt.plot(history["loss_discriminator"])
+    plt.title("Losses of the models")
+    plt.legend(["Generator", "Discriminator"])
+    if save: plt.savefig(data_dir + "losses.png")
+    if display: plt.show()
 
 def plot_history():
 
