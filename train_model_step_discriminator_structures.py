@@ -27,7 +27,7 @@ from model_discriminator import DiscriminatorStructures as DiscriminatorStructur
 
 plot_metadata_training = True
 
-# nohup python3 train_model_step_discriminator.py > nohup_1.out &
+# nohup python3 train_model_step_discriminator_structures.py > nohup_1.out &
 
 def calculate_loss(criterion, predictions, target, weights, n_weights, device):
     loss = torch.zeros((1), device=device)
@@ -137,6 +137,9 @@ def train_model( lr, epochs, batch_size, k_epochs_d, k_epochs_g, alpha, beta, ga
     
     last_batch_idx = np.ceil(data_samples / batch_size) - 1
     
+    
+    torch.autograd.set_detect_anomaly(True)
+    
     start_time = time()
     for epoch in range(epochs):
 
@@ -160,11 +163,11 @@ def train_model( lr, epochs, batch_size, k_epochs_d, k_epochs_g, alpha, beta, ga
                 predictions = discriminator(data_)
                 loss_real, mean_prediction_real = calculate_loss(criterion_BCE, predictions, target_ones[int(batch_idx == last_batch_idx)], weights, n_weights, device)
                 
-                structure_f = ut.calculate_structure(data_, scales, device=device)
+                structure_f = ut.calculate_structure_noInplace(data_, scales, device=device)
 
-                loss_real_s2 = criterion_BCE(discriminator_s2(structure_f[:,0,:]), target_ones[int(batch_idx == last_batch_idx)])
-                loss_real_skewness = criterion_BCE(discriminator_skewness(structure_f[:,1,:]), target_ones[int(batch_idx == last_batch_idx)])
-                loss_real_flatness = criterion_BCE(discriminator_flatness(structure_f[:,2,:]), target_ones[int(batch_idx == last_batch_idx)])
+                loss_real_s2 = criterion_BCE(discriminator_s2(structure_f[:,0,:])[:,0], target_ones[int(batch_idx == last_batch_idx)])
+                loss_real_skewness = criterion_BCE(discriminator_skewness(structure_f[:,1,:])[:,0], target_ones[int(batch_idx == last_batch_idx)])
+                loss_real_flatness = criterion_BCE(discriminator_flatness(structure_f[:,2,:])[:,0], target_ones[int(batch_idx == last_batch_idx)])
                 
                 loss_real_total = 0.25 * ( loss_real + loss_real_s2 + loss_real_skewness + loss_real_flatness)
 
@@ -177,11 +180,11 @@ def train_model( lr, epochs, batch_size, k_epochs_d, k_epochs_g, alpha, beta, ga
                 predictions = discriminator(fake_samples)
                 loss_fake, mean_prediction_fake = calculate_loss(criterion_BCE, predictions, target_zeros[int(batch_idx == last_batch_idx)], weights, n_weights, device)
                 
-                structure_f = ut.calculate_structure(fake_samples, scales, device=device)
+                structure_f = ut.calculate_structure_noInplace(fake_samples, scales, device=device)
 
-                loss_fake_s2 = criterion_BCE(discriminator_s2(structure_f[:,0,:]), target_zeros[int(batch_idx == last_batch_idx)])
-                loss_fake_skewness = criterion_BCE(discriminator_skewness(structure_f[:,1,:]), target_zeros[int(batch_idx == last_batch_idx)])
-                loss_fake_flatness = criterion_BCE(discriminator_flatness(structure_f[:,2,:]), target_zeros[int(batch_idx == last_batch_idx)])
+                loss_fake_s2 = criterion_BCE(discriminator_s2(structure_f[:,0,:])[:,0], target_zeros[int(batch_idx == last_batch_idx)])
+                loss_fake_skewness = criterion_BCE(discriminator_skewness(structure_f[:,1,:])[:,0], target_zeros[int(batch_idx == last_batch_idx)])
+                loss_fake_flatness = criterion_BCE(discriminator_flatness(structure_f[:,2,:])[:,0], target_zeros[int(batch_idx == last_batch_idx)])
 
                 loss_fake_total = 0.25 * ( loss_fake + loss_fake_s2 + loss_fake_skewness + loss_fake_flatness)
 
@@ -234,11 +237,11 @@ def train_model( lr, epochs, batch_size, k_epochs_d, k_epochs_g, alpha, beta, ga
                 predictions = discriminator(generated_signal)
                 loss_g, mean_predictions_g = calculate_loss(criterion_BCE, predictions, target_ones[int(batch_idx == last_batch_idx)], weights, n_weights, device)
                 
-                structure_f = ut.calculate_structure(generated_signal, scales, device=device)
+                structure_f = ut.calculate_structure_noInplace(generated_signal, scales, device=device)
 
-                loss_g_s2 = criterion_BCE(discriminator_s2(structure_f[:,0,:]), target_ones[int(batch_idx == last_batch_idx)])
-                loss_g_skewness = criterion_BCE(discriminator_skewness(structure_f[:,1,:]), target_ones[int(batch_idx == last_batch_idx)])
-                loss_g_flatness = criterion_BCE(discriminator_flatness(structure_f[:,2,:]), target_ones[int(batch_idx == last_batch_idx)])
+                loss_g_s2 = criterion_BCE(discriminator_s2(structure_f[:,0,:])[:,0], target_ones[int(batch_idx == last_batch_idx)])
+                loss_g_skewness = criterion_BCE(discriminator_skewness(structure_f[:,1,:])[:,0], target_ones[int(batch_idx == last_batch_idx)])
+                loss_g_flatness = criterion_BCE(discriminator_flatness(structure_f[:,2,:])[:,0], target_ones[int(batch_idx == last_batch_idx)])
 
                 loss_g_total = 0.25 * (loss_g + loss_g_s2 + loss_g_skewness + loss_g_flatness)
 
@@ -321,7 +324,7 @@ def train_model( lr, epochs, batch_size, k_epochs_d, k_epochs_g, alpha, beta, ga
 # nohup python3 train_model.py > nohup_1.out &
 if __name__ == '__main__':
     lr = 0.002
-    epochs = 400
+    epochs = 70
     batch_size = 8
     k_epochs_d = 2
     k_epochs_g = 1
@@ -336,8 +339,8 @@ if __name__ == '__main__':
     data_stride = 2**15
     len_samples = 2**15
     
-    # out_dir = ut.get_dir(out_dir)
-    out_dir = os.path.join(out_dir, 'lkfQq8')
+    out_dir = ut.get_dir(out_dir)
+    #  out_dir = os.path.join(out_dir, 'lkfQq8')
     
     weights = torch.Tensor([1,1,0.5,0.5,0.5,0.5,0.25,0.25,0.25,0.25,0.25,0.25,0.25,0.25])
     print(out_dir)
