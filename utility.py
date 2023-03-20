@@ -71,13 +71,13 @@ def calculate_structure_noInplace(signal, scales, device="cpu"):
 
     for idx, scale in enumerate(scales):
         incrs = tmp[:,0,scale:]-tmp[:,0,:-scale]
-        structure_f[:,0,idx] = torch.mean(torch.square(incrs), dim=1)
+        structure_f[:,0,idx] = torch.log(torch.mean(torch.square(incrs), dim=1))
         
         stdincrs = torch.std(incrs, dim=1)
         incrsnorm = (incrs - torch.nanmean(incrs, dim=1)[:,None]) / stdincrs[:,None] # Batch x Length
         
         structure_f[:,1,idx] = torch.nanmean(torch.pow(incrsnorm,3), dim=1)
-        structure_f[:,2,idx] = torch.nanmean(torch.pow(incrsnorm, 4), dim=1)
+        structure_f[:,2,idx] = torch.log(torch.nanmean(torch.pow(incrsnorm, 4), dim=1) / 3)
 
     # log s2 and log flatness / 3
     #log_s2 = torch.log(structure_f[:,0,:])
