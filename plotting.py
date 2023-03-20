@@ -9,25 +9,31 @@ import os
 
 import utility as ut
 
+import torch
 from model_generator import CNNGeneratorBigConcat as CNNGenerator
-from model_discriminator import DiscriminatorMultiNet16 as Discriminator
+# from model_discriminator import DiscriminatorMultiNet16 as Discriminator
 #data_dir = './generated/U2lVlk/'
-data_dir = "./generated/hEpAZm/"
+
+data_dir = "./generated/ParUfu/"
 temp_dir = "./temp/"
 save = True
 display = False
 
 def main():
-    # plot_real_data()
+	samples_len = 2**15
+	print("Plotting histogram and structure functions with an output length of:", samples_len)
     
-    plot_history_structureTraining()
-    # plot_history()
-    # plot_samples()
-    # plot_training_samples(eta=5, L=2350)
-    # plot_compare_structure(eta=5, L=2350, len_=2**16)
-    # plot_histogram(n_samples=64, len_=2**16, scales=[2,4,8,16,128,256,1024,4096,8192,16384])
+	# plot_real_data()
 
-    # plot_structure()
+	plot_history_structureTraining()
+	# plot_history()
+
+	plot_samples()
+	plot_compare_structure(eta=5, L=2350, len_=samples_len)
+	plot_histogram(n_samples=64, len_=samples_len, scales=[2,4,8,16,128,256,1024,4096,8192,16384])
+
+	# plot_training_samples(eta=5, L=2350)
+	# plot_structure()
 
 def plot_training_samples(max_plot=10, mspf=400, n_loop=1, eta=5, L=2350, device="cuda"):
     color=np.array([166, 178, 255])/255.0
