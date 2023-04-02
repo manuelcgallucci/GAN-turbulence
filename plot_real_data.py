@@ -18,7 +18,7 @@ display = False
 
 def main():
 	
-    plot_real_data(max_k = 1)
+    plot_real_data(max_k = 5)
     # plot_real_structures(data_length=2**19, device="cpu",eta=5, L=2350)
 	# plot_histograms(data_length=2**19, device="cpu", scales=[2**x for x in range(1,14)], n_bins=150)
 
@@ -276,18 +276,20 @@ def main():
 
 ### ======================================= ###
 
-def plot_real_data(max_k = 64):
+def plot_real_data(max_k = 64, fs=25000):
     data_train = np.load(full_data_dir)
     data_train = np.flip(data_train, axis=0).copy()
 
     data_train = np.reshape(data_train, (-1, 2**15))
     print("Data shape for samples plotting:", data_train.shape)
     
-    plt.figure()
-    
+    xaxis = [i*1/fs for i in range(2**15)]
+    plt.figure() 
     for k in range(data_train.shape[0]):
         if k >= max_k: break
-        plt.plot(data_train[k, :], linewidth=1.0)
+        plt.plot(xaxis, data_train[k+164, :], linewidth=1.0)
+    plt.xlabel("time [s]")
+    plt.ylabel("velocity [m/s]")
     plt.suptitle(str(max_k) + ' Normalized samples')
     plt.savefig(data_dir+"samples.png")
     plt.close()
