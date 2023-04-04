@@ -14,23 +14,23 @@ from model_generator import CNNGeneratorBigConcat as CNNGenerator
 # from model_discriminator import DiscriminatorMultiNet16 as Discriminator
 #data_dir = './generated/U2lVlk/'
 
-data_dir = "./generated/ParUfu/"
+data_dir = "./generated/lkfQq8/"
 temp_dir = "./temp/"
 save = True
 display = False
 
 def main():
-	samples_len = 2**15
+	samples_len = 2**16
 	print("Plotting histogram and structure functions with an output length of:", samples_len)
     
 	# plot_real_data()
 
-	plot_history_structureTraining()
+	# plot_history_structureTraining()
 	# plot_history()
 
-	plot_samples()
+	# plot_samples()
 	plot_compare_structure(eta=5, L=2350, len_=samples_len)
-	plot_histogram(n_samples=64, len_=samples_len, scales=[2,4,8,16,128,256,1024,4096,8192,16384])
+	# plot_histogram(n_samples=64, len_=samples_len, scales=[2,4,8,16,128,256,1024,4096,8192,16384])
 
 	# plot_training_samples(eta=5, L=2350)
 	# plot_structure()
@@ -320,8 +320,15 @@ def plot_compare_structure(n_samples=64, len_=2**15, edge=4096, eta=None, L=None
     noise = torch.randn((n_samples, 1, len_+2*edge), device=device)
     with torch.no_grad():
         generated_samples = generator(noise)
-    
     generated_samples = generated_samples[:,:,edge:-edge]
+    
+    # for i in range(n_samples):
+	#     generated_samples[i,0,:] = np.flip(generated_samples[i,0,:])
+    generated_samples = generated_samples[:,0,:]
+    
+    generated_samples = np.flip(np.array(generated_samples.cpu()), axis=1).copy()
+    generated_samples = generated_samples[:,None,:]
+    generated_samples = torch.Tensor(generated_samples).to(device)
     # generated_samples = torch.Tensor(np.load(data_dir + 'samples.npz')["arr_0"])
     log_scale = np.log(scales)
     
@@ -330,7 +337,7 @@ def plot_compare_structure(n_samples=64, len_=2**15, edge=4096, eta=None, L=None
     struct_std_generate = torch.std(struct[:,:,:], dim=0).cpu()
 
     # TODO correct the data trin so this is not needed anymore
-    # data_train = np.flip(data_train, axis=1).copy()
+    data_train = np.flip(data_train, axis=1).copy()
     struct = ut.calculate_structure(torch.Tensor(data_train[:,None,:]), scales, device=device)
     struct_mean_real = torch.mean(struct[:,:,:], dim=0).cpu()
     struct_std_real = torch.std(struct[:,:,:], dim=0).cpu()
