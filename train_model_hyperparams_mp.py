@@ -326,7 +326,8 @@ if __name__ == '__main__':
     # weights_losses_arr = [[0.25, 0.25, 0.25, 0.25], [0.3, 0.25, 0.2, 0.25], [0.3, 0.25, 0.25, 0.2], [0.3, 0.3, 0.1, 0.3]]
     # weights_losses_arr = [[0.3, 0.3, 0.15, 0.25], [0.3, 0.3, 0.2, 0.2], [0.3, 0.3, 0.25, 0.15], [0.3, 0.3, 0.3, 0.1]]
     # weights_losses_arr = [[0.35, 0.25, 0.15, 0.25], [0.35, 0.25, 0.2, 0.2], [0.35, 0.25, 0.25, 0.15], [0.35, 0.3, 0.1, 0.25]] 
-    # weights_losses_arr = [[0.35, 0.3, 0.15, 0.2], [0.35, 0.3, 0.2, 0.15], [0.35, 0.3, 0.25, 0.1], [0.35, 0.35, 0.1, 0.2]]
+    weights_losses_arr = [[0.35, 0.3, 0.15, 0.2], [0.35, 0.3, 0.2, 0.15], [0.35, 0.3, 0.25, 0.1], [0.35, 0.35, 0.1, 0.2]]
+    # NEXT ONE:
     # weights_losses_arr = [[0.35, 0.35, 0.15, 0.15], [0.35, 0.35, 0.2, 0.1], [0.4, 0.2, 0.2, 0.2], [0.4, 0.25, 0.1, 0.25]]
     # weights_losses_arr = [[0.4, 0.25, 0.15, 0.2], [0.4, 0.25, 0.2, 0.15], [0.4, 0.25, 0.25, 0.1], [0.4, 0.3, 0.1, 0.2]]
     # weights_losses_arr = [[0.4, 0.3, 0.15, 0.15], [0.4, 0.3, 0.2, 0.1], [0.4, 0.35, 0.1, 0.15], [0.4, 0.35, 0.15, 0.1]]
@@ -337,29 +338,36 @@ if __name__ == '__main__':
     # weights_losses_arr = [[0.55, 0.2, 0.1, 0.15], [0.55, 0.2, 0.15, 0.1], [0.55, 0.25, 0.1, 0.1], [0.6, 0.15, 0.1, 0.15]]
     # weights_losses_arr = [[0.6, 0.15, 0.15, 0.1], [0.6, 0.2, 0.1, 0.1], [0.65, 0.15, 0.1, 0.1], [0.7, 0.1, 0.1, 0.1]]
     
-	for weights_losses in weights_losses_arr:
-		out_dir = './generated'
-		out_dir = ut.get_dir(out_dir)
-		
-		meta_dict = {
-			"lr":lr,
-			"epochs":epochs,
-			"batch_size":batch_size,
-			"k_epochs_d":k_epochs_d,
-			"out_dir":out_dir,
-			"weights_sample_losses":weights_sample_losses,
-			"weights_losses":weights_losses,
-			"data_type_loading":data_type,
-			"data_type_stride":data_stride,
-			"len_samples":len_samples,
-			"train_file_type": "Training done for a combined discriminator loss with structure functions",
-		}
-		
-		ut.save_meta(meta_dict, out_dir)
-		print("Begun training " + out_dir + " " + str(weights_losses))
-		train_model(lr, epochs, batch_size, k_epochs_d, weights_sample_losses, weights_losses, data_type, data_stride, len_samples, out_dir, noise_size)
-		print("Finished training " + out_dir + " " + str(weights_losses))
+    with mp.Pool(processes=2) as pool:
+        results = []
+        for weights_losses in weights_losses_arr:
+            out_dir = './generated'
+            out_dir = ut.get_dir(out_dir)
+            
+            meta_dict = {
+                "lr":lr,
+                "epochs":epochs,
+                "batch_size":batch_size,
+                "k_epochs_d":k_epochs_d,
+                "out_dir":out_dir,
+                "weights_sample_losses":weights_sample_losses,
+                "weights_losses":weights_losses,
+                "data_type_loading":data_type,
+                "data_type_stride":data_stride,
+                "len_samples":len_samples,
+                "train_file_type": "Training done for a combined discriminator loss with structure functions",
+            }
+			
+            ut.save_meta(meta_dict, out_dir)
+            #print("Begun training " + out_dir + " " + str(weights_losses))
+            res = pool.apply_async(train_model, (lr, epochs, batch_size, k_epochs_d, weights_sample_losses, weights_losses, data_type, data_stride, len_samples, out_dir, noise_size,))
+            #print("Finished training " + out_dir + " " + str(weights_losses))
 
-		with open( "hyperparam_evo.txt", "a") as f:
-			f.write(str(weights_losses) + " || " + out_dir + '\n')
+            # train_model(lr, epochs, batch_size, k_epochs_d, weights_sample_losses, weights_losses, data_type, data_stride, len_samples, out_dir, noise_size=(1, len_samples))
+            results.append(res)
+			
+        for res in results:
+            out_dir = res.get()
+            with open( "hyperparam_evo.txt", "a") as f:
+                f.write(str(weights_losses) + " || " + out_dir + '\n')
    
