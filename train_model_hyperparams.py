@@ -298,16 +298,16 @@ def test_print(str_):
 # nohup python3 train_model.py > nohup_1.out &
 if __name__ == '__main__':
 
-    # range_loss = np.arange(10,90,5)
-    # losses = []
-    # for l_samples in range_loss:
-    #     for l_s2 in range_loss:
-    #         for l_skewness in range_loss:
-    #             for l_flatness in range_loss:
-    #                 if l_samples >= max([l_s2, l_skewness, l_flatness]):
-    #                     if l_s2 >= max([l_skewness, l_flatness]):
-    #                         if l_samples + l_s2 + l_skewness + l_flatness == 100:
-    #                             losses.append([l_samples/ 100, l_s2/ 100, l_skewness/ 100, l_flatness/ 100] )
+    range_loss = np.arange(10,90,5)
+    weights_losses_arr = []
+    for l_samples in range_loss:
+        for l_s2 in range_loss:
+            for l_skewness in range_loss:
+                for l_flatness in range_loss:
+                    if l_samples >= max([l_s2, l_skewness, l_flatness]):
+                        if l_s2 >= max([l_skewness, l_flatness]):
+                            if l_samples + l_s2 + l_skewness + l_flatness == 100:
+                                weights_losses_arr.append([l_samples/ 100, l_s2/ 100, l_skewness/ 100, l_flatness/ 100] )
 
     data_type = "full" # full samples from the original data     
     data_stride = 2**15
