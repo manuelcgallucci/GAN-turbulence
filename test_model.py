@@ -50,4 +50,5 @@ if __name__ == "__main__":
         struct_mean_generated=test_model(scales, model_id=model_name, device=device)
         if not struct_mean_generated is None:
             mse_structure = torch.mean(torch.square(struct_mean_generated - struct_mean_real), dim=1)
-            print(model_name, mse_structure)
+            mse_structure = mse_structure.cpu().tolist()
+            print(model_name, *mse_structure)
