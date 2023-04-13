@@ -37,8 +37,8 @@ def test_model(scales, model_id=None, n_samples=64, n_batches=4, len_=2**15, edg
    
 
 if __name__ == "__main__":
-    n_batches=4
-    n_samples=64
+    n_batches=8
+    n_samples=128
     len_=2**15
     
     print("Order: S2, Skewness, Flatness")
