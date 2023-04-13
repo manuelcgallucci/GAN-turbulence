@@ -14,13 +14,13 @@ from model_generator import CNNGeneratorBigConcat as CNNGenerator
 # from model_discriminator import DiscriminatorMultiNet16 as Discriminator
 #data_dir = './generated/U2lVlk/'
 
-data_dir = "./generated/lkfQq8/"
+data_dir = "./generated/6SgDhO/"
 temp_dir = "./temp/"
 save = True
 display = False
 
 def main():
-	samples_len = 2**16
+	samples_len = 2**15
 	print("Plotting histogram and structure functions with an output length of:", samples_len)
     
 	# plot_real_data()
@@ -30,7 +30,7 @@ def main():
 
 	# plot_samples()
 	plot_compare_structure(eta=5, L=2350, len_=samples_len)
-	# plot_histogram(n_samples=64, len_=samples_len, scales=[2,4,8,16,128,256,1024,4096,8192,16384])
+	plot_histogram(n_samples=64, len_=samples_len, scales=[2,4,8,16,128,256,1024,4096,8192,16384])
 
 	# plot_training_samples(eta=5, L=2350)
 	# plot_structure()
