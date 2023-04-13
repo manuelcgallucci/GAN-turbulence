@@ -8,7 +8,7 @@ from model_generator import CNNGeneratorBigConcat as CNNGenerator
 
 model_names = ["mFwn3R","EDDVg4","1mnY3T","4K9Vke","6SgDhO","13whmJ","ORUKrz","k5cpTg","cyy81t","3fzNLY","XZ9Nph","2i5EIu","f5tOXl","VUwRRy","zXxm1p","VTsm0o","aKbLgh","7PU6YZ","Bnh0Pu"]
 
-def test_model(scales, model_id=None, n_samples=64, len_=2**15, edge=4096, device="cuda"):
+def test_model(scales, model_id=None, n_samples=64, n_batches=4, len_=2**15, edge=4096, device="cuda"):
     data_dir = os.path.join('./generated', model_id)
     generator_dir = os.path.join(data_dir, "generator.pt")
 
@@ -19,20 +19,28 @@ def test_model(scales, model_id=None, n_samples=64, len_=2**15, edge=4096, devic
     generator = CNNGenerator().to(device)
     generator.load_state_dict(torch.load(generator_dir))
     
-    # Generate the samples
-    noise = torch.randn((n_samples, 1, len_+2*edge), device=device)
-    with torch.no_grad():
-        generated_samples = generator(noise)
-        generated_samples = generated_samples[:,:,edge:-edge]
+    struct_means = torch.zeros((3, scales.shape[0]), device=device)
+    for i_batch in range(n_batches):
+        # Generate the samples
+        noise = torch.randn((n_samples, 1, len_+2*edge), device=device)
+        with torch.no_grad():
+            generated_samples = generator(noise)
+            generated_samples = generated_samples[:,:,edge:-edge]
 
-    # Generate the structure functions from the data 
+        # Generate the structure functions from the data 
+        struct = ut.calculate_structure(generated_samples, scales, device=device)
+        struct_mean_generated = torch.mean(struct[:,:,:], dim=0)
 
-    struct = ut.calculate_structure(generated_samples, scales, device=device)
-    struct_mean_generated = torch.mean(struct[:,:,:], dim=0)
-    return struct_mean_generated
+        struct_means += struct_mean_generated 
+
+    return struct_means  / n_batches
    
 
 if __name__ == "__main__":
+    n_batches=4
+    n_samples=64
+    len_=2**15
+    
     print("Order: S2, Skewness, Flatness")
     
     device="cuda"
@@ -47,7 +55,7 @@ if __name__ == "__main__":
     struct_mean_real = torch.mean(struct_mean_real[:,:,:], dim=0)
     
     for model_name in model_names:
-        struct_mean_generated=test_model(scales, model_id=model_name, device=device)
+        struct_mean_generated=test_model(scales, model_id=model_name, n_batches=n_batches, n_samples=n_samples, len_=len_, device=device)
         if not struct_mean_generated is None:
             mse_structure = torch.mean(torch.square(struct_mean_generated - struct_mean_real), dim=1)
             mse_structure = mse_structure.cpu().tolist()
