@@ -14,7 +14,7 @@ def test_model(scales, model_id=None, n_samples=64, len_=2**15, edge=4096, devic
 
     if not os.path.exists(generator_dir):
         print("Model {:s} doesnt exist!".format(model_id))
-
+        return None 
     # Load the model 
     generator = CNNGenerator().to(device)
     generator.load_state_dict(torch.load(generator_dir))
@@ -48,5 +48,6 @@ if __name__ == "__main__":
     
     for model_name in model_names:
         struct_mean_generated=test_model(scales, model_id=model_name, device=device)
-        mse_structure = torch.mean(torch.square(struct_mean_generated - struct_mean_real), dim=1)
-        print(model_name, mse_structure)
+        if not struct_mean_generated is None:
+            mse_structure = torch.mean(torch.square(struct_mean_generated - struct_mean_real), dim=1)
+            print(model_name, mse_structure)
