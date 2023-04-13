@@ -21,6 +21,7 @@ display = False
 
 def main():
 	samples_len = 2**15
+        
 	print("Plotting histogram and structure functions with an output length of:", samples_len)
     
 	# plot_real_data()
@@ -29,7 +30,7 @@ def main():
 	# plot_history()
 
 	# plot_samples()
-	plot_compare_structure(eta=5, L=2350, len_=samples_len)
+	plot_compare_structure(eta=5, L=2350, n_samples=200, n_batches=16, len_=samples_len)
 	plot_histogram(n_samples=64, len_=samples_len, scales=[2,4,8,16,128,256,1024,4096,8192,16384])
 
 	# plot_training_samples(eta=5, L=2350)
@@ -307,7 +308,7 @@ def plot_structure(n_samples=64, len_=2**15, edge=4096, device="cuda"):
 
 ### ======================================= ###
 
-def plot_compare_structure(n_samples=64, len_=2**15, edge=4096, eta=None, L=None, device="cuda"):
+def plot_compare_structure(n_samples=64, n_batches=2, len_=2**15, edge=4096, eta=None, L=None, device="cuda"):
     data_train = np.load('./data/data.npy')
 
     nv=10
@@ -317,24 +318,30 @@ def plot_compare_structure(n_samples=64, len_=2**15, edge=4096, eta=None, L=None
 
     generator = CNNGenerator().to(device)
     generator.load_state_dict(torch.load(data_dir + 'generator.pt'))
-    noise = torch.randn((n_samples, 1, len_+2*edge), device=device)
-    with torch.no_grad():
-        generated_samples = generator(noise)
-    generated_samples = generated_samples[:,:,edge:-edge]
     
-    # for i in range(n_samples):
-	#     generated_samples[i,0,:] = np.flip(generated_samples[i,0,:])
-    generated_samples = generated_samples[:,0,:]
-    
-    generated_samples = np.flip(np.array(generated_samples.cpu()), axis=1).copy()
-    generated_samples = generated_samples[:,None,:]
-    generated_samples = torch.Tensor(generated_samples).to(device)
-    # generated_samples = torch.Tensor(np.load(data_dir + 'samples.npz')["arr_0"])
+    struct_means_g = torch.zeros((3, scales.shape[0]), device=device)
+    for i_batch in range(n_batches):
+        noise = torch.randn((n_samples, 1, len_+2*edge), device=device)
+        with torch.no_grad():
+            generated_samples = generator(noise)
+        generated_samples = generated_samples[:,:,edge:-edge]
+        
+        # for i in range(n_samples):
+        #     generated_samples[i,0,:] = np.flip(generated_samples[i,0,:])
+        generated_samples = generated_samples[:,0,:]
+        
+        generated_samples = np.flip(np.array(generated_samples.cpu()), axis=1).copy()
+        generated_samples = generated_samples[:,None,:]
+        generated_samples = torch.Tensor(generated_samples).to(device)
+        # generated_samples = torch.Tensor(np.load(data_dir + 'samples.npz')["arr_0"])
+        
+        struct = ut.calculate_structure(generated_samples, scales, device=device)
+        struct_mean_generated = torch.mean(struct[:,:,:], dim=0)
+        struct_means_g += struct_mean_generated
+        struct_std_generate = torch.std(struct[:,:,:], dim=0).cpu()
+
+    struct_means_g = struct_means_g.cpu() / n_batches
     log_scale = np.log(scales)
-    
-    struct = ut.calculate_structure(generated_samples, scales, device=device)
-    struct_mean_generated = torch.mean(struct[:,:,:], dim=0).cpu()
-    struct_std_generate = torch.std(struct[:,:,:], dim=0).cpu()
 
     # TODO correct the data trin so this is not needed anymore
     data_train = np.flip(data_train, axis=1).copy()
@@ -347,7 +354,7 @@ def plot_compare_structure(n_samples=64, len_=2**15, edge=4096, eta=None, L=None
     vlines_lim = [(-7, 1), (-0.7, 0.1), (-0.2, 1)]
     for idx in range(3):
         plt.figure()
-        plt.errorbar(log_scale, struct_mean_generated[idx,:], struct_std_generate[idx,:], color="red",  linewidth=2.0)
+        plt.errorbar(log_scale, struct_means_g[idx,:], struct_std_generate[idx,:], color="red",  linewidth=2.0)
         plt.errorbar(log_scale, struct_mean_real[idx,:], struct_std_real[idx,:], linewidth=2.0, alpha=0.5)
         plt.title("Structure function {:s} on the samples".format(names[idx]))
         plt.xlabel("scales (log)")
@@ -361,7 +368,7 @@ def plot_compare_structure(n_samples=64, len_=2**15, edge=4096, eta=None, L=None
         if display: plt.show()
 
     # Compute and save structure function metrics
-    mse_structure = torch.mean(torch.square(struct_mean_generated - struct_mean_real), dim=1)
+    mse_structure = torch.mean(torch.square(struct_means_g - struct_mean_real), dim=1)
     print(mse_structure)
     
 ### ======================================= ###
