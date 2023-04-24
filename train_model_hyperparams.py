@@ -295,48 +295,55 @@ def test_print(str_):
 
 
 
-# nohup python3 train_model.py > nohup_1.out &
+# nohup python3 train_model_hyperparams.py > nohup_1.out &
 if __name__ == '__main__':
 
-    range_loss = np.arange(10,90,5)
-    weights_losses_arr = []
-    for l_samples in range_loss:
-        for l_s2 in range_loss:
-            for l_skewness in range_loss:
-                for l_flatness in range_loss:
-                    if l_samples >= max([l_s2, l_skewness, l_flatness]):
-                        if l_s2 >= max([l_skewness, l_flatness]):
-                            if l_samples + l_s2 + l_skewness + l_flatness == 100:
-                                weights_losses_arr.append([l_samples/ 100, l_s2/ 100, l_skewness/ 100, l_flatness/ 100] )
+	range_loss = np.arange(10,90,5)
+	weights_losses_arr = []
+	for l_samples in range_loss:
+		for l_s2 in range_loss:
+			for l_skewness in range_loss:
+				for l_flatness in range_loss:
+					if l_samples >= max([l_s2, l_skewness, l_flatness]):
+						if l_s2 >= max([l_skewness, l_flatness]):
+							if l_samples + l_s2 + l_skewness + l_flatness == 100:
+								weights_losses_arr.append([l_samples/ 100, l_s2/ 100, l_skewness/ 100, l_flatness/ 100] )
+								
+	data_type = "full" # full samples from the original data     
+	data_stride = 2**15
+	len_samples = 2**15
+	noise_size=(1, len_samples)
 
-    data_type = "full" # full samples from the original data     
-    data_stride = 2**15
-    len_samples = 2**15
-    noise_size=(1, len_samples)
+	lr = 0.002
+	epochs = 350
+	batch_size = 16
+	k_epochs_d = 2
 
-    lr = 0.002
-    epochs = 350
-    batch_size = 16
-    k_epochs_d = 2
+	weights_sample_losses = torch.Tensor([1,1,0.5,0.5,0.5,0.5,0.25,0.25,0.25,0.25,0.25,0.25,0.25,0.25])
+	
+	# weights_losses : # Samples, s2, skewness, flatness
+	# nohup python3 train_model_hyperparams.py > nohup_14.out &
+	# Each of these takes about 8 hs to complete with multiprocessing 
+	#ssh 22
+	#weights_losses_arr = [[0.3, 0.25, 0.2, 0.25], [0.3, 0.25, 0.25, 0.2], [0.3, 0.3, 0.1, 0.3]] #nohup2
+	#weights_losses_arr = [[0.3, 0.3, 0.15, 0.25], [0.3, 0.3, 0.2, 0.2], [0.3, 0.3, 0.25, 0.15], [0.3, 0.3, 0.3, 0.1]] #nohup3
+	# ssh 23
+	#weights_losses_arr = [[0.35, 0.25, 0.15, 0.25], [0.35, 0.25, 0.2, 0.2], [0.35, 0.25, 0.25, 0.15], [0.35, 0.3, 0.1, 0.25]] #nohup4
+	#weights_losses_arr = [[0.35, 0.3, 0.15, 0.2], [0.35, 0.3, 0.2, 0.15], [0.35, 0.3, 0.25, 0.1], [0.35, 0.35, 0.1, 0.2]] #nohup5
+	# ssh 24
+	#weights_losses_arr = [[0.35, 0.35, 0.15, 0.15], [0.35, 0.35, 0.2, 0.1], [0.4, 0.2, 0.2, 0.2], [0.4, 0.25, 0.1, 0.25]] #nohup6
+	#weights_losses_arr = [[0.4, 0.25, 0.15, 0.2], [0.4, 0.25, 0.2, 0.15], [0.4, 0.25, 0.25, 0.1], [0.4, 0.3, 0.1, 0.2]] #nohup7
+	# DONE
+	# weights_losses_arr = [[0.45, 0.2, 0.2, 0.15], [0.45, 0.25, 0.1, 0.2]] #nohup9
+	
+	# shh 21 nohup python3 train_model_hyperparams.py > nohup_1.out &
+	# weights_losses_arr = [[0.4, 0.35, 0.15, 0.1]] #nohup15
+	# ssh 24
+	# weights_losses_arr = [[0.5, 0.3, 0.1, 0.1]] #nohup18
+	# ssh 25
 
-    weights_sample_losses = torch.Tensor([1,1,0.5,0.5,0.5,0.5,0.25,0.25,0.25,0.25,0.25,0.25,0.25,0.25])
+	weights_losses_arr = [[0.35, 0.35, 0.20, 0.10]] #nohup2x
 
-    # weights_losses : # Samples, s2, skewness, flatness
-    # Each of these takes about 8 hs to complete with multiprocessing 
-    # weights_losses_arr = [[0.25, 0.25, 0.25, 0.25], [0.3, 0.25, 0.2, 0.25], [0.3, 0.25, 0.25, 0.2], [0.3, 0.3, 0.1, 0.3]]
-    # weights_losses_arr = [[0.3, 0.3, 0.15, 0.25], [0.3, 0.3, 0.2, 0.2], [0.3, 0.3, 0.25, 0.15], [0.3, 0.3, 0.3, 0.1]]
-    # weights_losses_arr = [[0.35, 0.25, 0.15, 0.25], [0.35, 0.25, 0.2, 0.2], [0.35, 0.25, 0.25, 0.15], [0.35, 0.3, 0.1, 0.25]] 
-    # weights_losses_arr = [[0.35, 0.3, 0.15, 0.2], [0.35, 0.3, 0.2, 0.15], [0.35, 0.3, 0.25, 0.1], [0.35, 0.35, 0.1, 0.2]]
-    # weights_losses_arr = [[0.35, 0.35, 0.15, 0.15], [0.35, 0.35, 0.2, 0.1], [0.4, 0.2, 0.2, 0.2], [0.4, 0.25, 0.1, 0.25]]
-    # weights_losses_arr = [[0.4, 0.25, 0.15, 0.2], [0.4, 0.25, 0.2, 0.15], [0.4, 0.25, 0.25, 0.1], [0.4, 0.3, 0.1, 0.2]]
-    # weights_losses_arr = [[0.4, 0.3, 0.15, 0.15], [0.4, 0.3, 0.2, 0.1], [0.4, 0.35, 0.1, 0.15], [0.4, 0.35, 0.15, 0.1]]
-    # weights_losses_arr = [[0.4, 0.4, 0.1, 0.1], [0.45, 0.2, 0.15, 0.2], [0.45, 0.2, 0.2, 0.15], [0.45, 0.25, 0.1, 0.2]]
-    # weights_losses_arr = [[0.45, 0.25, 0.15, 0.15], [0.45, 0.25, 0.2, 0.1], [0.45, 0.3, 0.1, 0.15], [0.45, 0.3, 0.15, 0.1]]
-    # weights_losses_arr = [[0.45, 0.35, 0.1, 0.1], [0.5, 0.2, 0.1, 0.2], [0.5, 0.2, 0.15, 0.15], [0.5, 0.2, 0.2, 0.1]]
-    # weights_losses_arr = [[0.5, 0.25, 0.1, 0.15], [0.5, 0.25, 0.15, 0.1], [0.5, 0.3, 0.1, 0.1], [0.55, 0.15, 0.15, 0.15]]
-    # weights_losses_arr = [[0.55, 0.2, 0.1, 0.15], [0.55, 0.2, 0.15, 0.1], [0.55, 0.25, 0.1, 0.1], [0.6, 0.15, 0.1, 0.15]]
-    # weights_losses_arr = [[0.6, 0.15, 0.15, 0.1], [0.6, 0.2, 0.1, 0.1], [0.65, 0.15, 0.1, 0.1], [0.7, 0.1, 0.1, 0.1]]
-    
 	for weights_losses in weights_losses_arr:
 		out_dir = './generated'
 		out_dir = ut.get_dir(out_dir)
