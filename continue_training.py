@@ -24,12 +24,6 @@ from model_discriminator import DiscriminatorMultiNet16_4 as Discriminator
 from model_discriminator import DiscriminatorStructures as DiscriminatorStructures
 import torch.multiprocessing as mp
 
-# from model_discriminator import DiscriminatorMultiNet16_4For2_16 as Discriminator
-# DiscriminatorStructures_v2
-# DiscriminatorMultiNetWeightedAvg DiscriminatorMultiNetNo512 DiscriminatorMultiNet16_4
-
-# nohup python3 train_model_hyperparams.py > nohup_1.out &
-
 def calculate_loss(criterion, predictions, target, weights, n_weights, device):
     loss = torch.zeros((1), device=device)
     for k in range(n_weights):
@@ -44,8 +38,16 @@ def combine_losses_expAvg(loss_samples, loss_s2, loss_skewness, loss_flatness):
 	
 	return  (alpha_samples * loss_samples + alpha_s2 * loss_s2 + alpha_skewness * loss_skewness + alpha_flatness * loss_flatness) / (alpha_samples + alpha_s2 + alpha_skewness + alpha_flatness)
 
-def train_model( lr, epochs, batch_size, k_epochs_d, weights_sample_losses, weights_losses, data_type, data_stride, len_samples,out_dir, noise_size):
-
+def load_model_weights(model, weights_path):
+    if os.path.exists(weights_path):
+        model.load_state_dict(torch.load(weights_path))
+    else:
+        print("Model file: {:s} not found. Initializing with random weights".format(weights_path))
+        model = model.apply(nn_d.weights_init)
+    return model 
+         
+def train_model_continue( lr, epochs, batch_size, k_epochs_d, weights_sample_losses, weights_losses, data_type, data_stride, len_samples,out_dir, noise_size):
+    
     n_weights = weights_sample_losses.size()[0]
     # Normalization for each loss
 
@@ -55,22 +57,22 @@ def train_model( lr, epochs, batch_size, k_epochs_d, weights_sample_losses, weig
         print("cuda device not found. Stopping the execution")
         return -1
 
-    # Models with Weight initialization
-    generator = CNNGenerator().to(device)
-    generator = generator.apply(nn_d.weights_init)
+    # Models and loading from checkpoint, else use random intialization
+    generator = CNNGenerator().to(device)     
+    generator = load_model_weights(generator, out_dir + '/generator.pt')
 
     discriminator = Discriminator().to(device)
-    discriminator = discriminator.apply(nn_d.weights_init)
+    discriminator = load_model_weights(discriminator, out_dir + '/discriminator.pt')
 
     discriminator_s2 = DiscriminatorStructures().to(device)
-    discriminator_s2 = discriminator_s2.apply(nn_d.weights_init)
+    discriminator_s2 = load_model_weights(discriminator_s2, out_dir + '/discriminator_s2.pt')
 
     discriminator_skewness = DiscriminatorStructures().to(device)
-    discriminator_skewness = discriminator_skewness.apply(nn_d.weights_init)
+    discriminator_skewness = load_model_weights(discriminator_skewness, out_dir + '/discriminator_skewness.pt')
 
     discriminator_flatness = DiscriminatorStructures().to(device)
-    discriminator_flatness = discriminator_flatness.apply(nn_d.weights_init)
-
+    discriminator_flatness = load_model_weights(discriminator_flatness, out_dir + '/discriminator_flatness.pt')
+    
     # define loss and optimizers
     criterion_BCE = torch.nn.BCELoss().to(device)
     # criterion_MSE = torch.nn.MSELoss().to(device)
@@ -85,28 +87,34 @@ def train_model( lr, epochs, batch_size, k_epochs_d, weights_sample_losses, weig
     # Train dataset 
     train_set, data_samples, data_len = dl.loadDataset(type=data_type, stride=data_stride, len_samples=len_samples)
     train_loader = DataLoader(train_set, batch_size=batch_size, num_workers = 0, shuffle = True, drop_last=False)
+    
+    history = np.load(out_dir+"/metaEvo.npz")
 
-    loss_real_array = torch.zeros((epochs))
-    loss_real_s2_array = torch.zeros((epochs))
-    loss_real_skewness_array = torch.zeros((epochs))
-    loss_real_flatness_array = torch.zeros((epochs))
-    loss_real_total_array = torch.zeros((epochs))
+    # Load already existing losses
+    loss_real_array = torch.cat((history["loss_real"], torch.zeros((epochs)))) 
+    loss_real_s2_array = torch.cat((history["loss_real_s2"], torch.zeros((epochs))))
+    loss_real_skewness_array = torch.cat((history["loss_real_skewness"], torch.zeros((epochs))))
+    loss_real_flatness_array = torch.cat((history["loss_real_flatness"], torch.zeros((epochs))))
+    loss_real_total_array = torch.cat((history["loss_real_total"], torch.zeros((epochs))))
 
-    loss_fake_array = torch.zeros((epochs))
-    loss_fake_s2_array = torch.zeros((epochs))
-    loss_fake_skewness_array = torch.zeros((epochs))
-    loss_fake_flatness_array = torch.zeros((epochs))
-    loss_fake_total_array = torch.zeros((epochs))
+    loss_fake_array = torch.cat((history["loss_fake"], torch.zeros((epochs))))
+    loss_fake_s2_array = torch.cat((history["loss_fake_s2"], torch.zeros((epochs))))
+    loss_fake_skewness_array = torch.cat((history["loss_fake_skewness"], torch.zeros((epochs))))
+    loss_fake_flatness_array = torch.cat((history["loss_fake_flatness"], torch.zeros((epochs))))
+    loss_fake_total_array = torch.cat((history["loss_fake_total"], torch.zeros((epochs))))
 
-    loss_discriminator_array = torch.zeros((epochs))
+    loss_discriminator_array = torch.cat((history["loss_discriminator"], torch.zeros((epochs))))
 
-    loss_g_array = torch.zeros((epochs))
-    loss_g_s2_array = torch.zeros((epochs))
-    loss_g_skewness_array = torch.zeros((epochs))
-    loss_g_flatness_array = torch.zeros((epochs))
+    loss_g_array = torch.cat((history["loss_g"], torch.zeros((epochs))))
+    loss_g_s2_array = torch.cat((history["loss_g_s2"], torch.zeros((epochs))))
+    loss_g_skewness_array = torch.cat((history["loss_g_skewness"], torch.zeros((epochs))))
+    loss_g_flatness_array = torch.cat((history["loss_g_flatness"], torch.zeros((epochs))))
 
-    loss_generator_array = torch.zeros((epochs))
+    loss_generator_array = torch.cat((history["loss_generator"], torch.zeros((epochs))))
 
+    epoch_offset = history["loss_discriminator"].shape[0]
+    
+    ## Optimizers
     optim_g.zero_grad()
     optim_d.zero_grad()
     optim_ds2.zero_grad()
@@ -134,12 +142,16 @@ def train_model( lr, epochs, batch_size, k_epochs_d, weights_sample_losses, weig
 
     # Calculate on the cpu and then put in GPU at training time 
     # These take some Mb of GPUram otherwise no time difference
+    saved_partial_res = 1
     data_structure_functions = []
+    struct_mean_real = torch.Tensor(device="cpu")
     for _, data_ in enumerate(train_loader):
         data_ = data_.to("cpu").float()
         structure_f = ut.calculate_structure_noInplace(data_, scales, device="cpu")        
+        struct_mean_real = struct_mean_real + torch.mean(structure_f, dim=0)
         data_structure_functions.append(structure_f)
 
+    struct_mean_real = struct_mean_real.to(device)
     start_time = time()
     for epoch in range(epochs):
 
@@ -206,19 +218,19 @@ def train_model( lr, epochs, batch_size, k_epochs_d, weights_sample_losses, weig
                 optim_dskewness.step()
                 optim_dflatness.step()
 
-                loss_real_array[epoch] += loss_real.item() / k_epochs_d
-                loss_real_s2_array[epoch] += loss_real_s2.item() / k_epochs_d
-                loss_real_skewness_array[epoch] += loss_real_skewness.item() / k_epochs_d
-                loss_real_flatness_array[epoch] += loss_real_flatness.item() / k_epochs_d
-                loss_real_total_array[epoch] += loss_real_total.item() / k_epochs_d
+                loss_real_array[epoch+epoch_offset] += loss_real.item() / k_epochs_d
+                loss_real_s2_array[epoch+epoch_offset] += loss_real_s2.item() / k_epochs_d
+                loss_real_skewness_array[epoch+epoch_offset] += loss_real_skewness.item() / k_epochs_d
+                loss_real_flatness_array[epoch+epoch_offset] += loss_real_flatness.item() / k_epochs_d
+                loss_real_total_array[epoch+epoch_offset] += loss_real_total.item() / k_epochs_d
 
-                loss_fake_array[epoch] += loss_fake.item() / k_epochs_d
-                loss_fake_s2_array[epoch] += loss_fake_s2.item() / k_epochs_d
-                loss_fake_skewness_array[epoch] += loss_fake_skewness.item() / k_epochs_d
-                loss_fake_flatness_array[epoch] += loss_fake_flatness.item() / k_epochs_d
-                loss_fake_total_array[epoch] += loss_fake_total.item() / k_epochs_d
+                loss_fake_array[epoch+epoch_offset] += loss_fake.item() / k_epochs_d
+                loss_fake_s2_array[epoch+epoch_offset] += loss_fake_s2.item() / k_epochs_d
+                loss_fake_skewness_array[epoch+epoch_offset] += loss_fake_skewness.item() / k_epochs_d
+                loss_fake_flatness_array[epoch+epoch_offset] += loss_fake_flatness.item() / k_epochs_d
+                loss_fake_total_array[epoch+epoch_offset] += loss_fake_total.item() / k_epochs_d
 
-                loss_discriminator_array[epoch] += loss_discriminator.item() / k_epochs_d
+                loss_discriminator_array[epoch+epoch_offset] += loss_discriminator.item() / k_epochs_d
 
                 ## TRAIN GENERATOR
                 generator.zero_grad()
@@ -237,30 +249,35 @@ def train_model( lr, epochs, batch_size, k_epochs_d, weights_sample_losses, weig
                 loss_g_flatness = criterion_BCE(discriminator_flatness(structure_f[:,2,:])[:,0], target_ones[int(batch_idx == last_batch_idx)])
                 
                 loss_generator = weights_losses[0] * loss_g_samples + weights_losses[1] * loss_g_s2 + weights_losses[2] * loss_g_skewness + weights_losses[3] * loss_g_flatness
-                # loss_g_total = combine_losses_expAvg( loss_g, loss_g_s2, loss_g_skewness, loss_g_flatness)
-
+                
                 loss_generator.backward()
                 optim_g.step()
 
-                loss_g_array[epoch] += loss_g_samples.item()
-                loss_g_s2_array[epoch] += loss_g_s2.item()
-                loss_g_skewness_array[epoch] += loss_g_skewness.item()
-                loss_g_flatness_array[epoch] += loss_g_flatness.item()
+                loss_g_array[epoch+epoch_offset] += loss_g_samples.item()
+                loss_g_s2_array[epoch+epoch_offset] += loss_g_s2.item()
+                loss_g_skewness_array[epoch+epoch_offset] += loss_g_skewness.item()
+                loss_g_flatness_array[epoch+epoch_offset] += loss_g_flatness.item()
 
-                loss_generator_array[epoch] += loss_generator.item()
-    
-        # print('Epoch [{}/{}] -\t Generator Loss: {:7.4f} \t/\t\t Discriminator Loss: {:7.4f}'.format(epoch+1, epochs, loss_generator_array[epoch], loss_discriminator_array[epoch]))
+                loss_generator_array[epoch+epoch_offset] += loss_generator.item()
+
+                # If the mean S2, Skewness and Flatness are 'good enough' then save the model
+                measures = torch.mean(torch.square(torch.mean(structure_f[:,:,:], dim=0) - struct_mean_real), dim=1)
+                print(measures)
+                if (measures < 0.0001).all():
+                    base_partial_dir = os.path.join(out_dir, "partial_{:d}".format(saved_partial_res))
+                    torch.save(generator.state_dict(), os.path.join(base_partial_dir, 'generator.pt'))
+                    with open( os.path.join(base_partial_dir, "partial_meta.txt"), "w") as f:
+                        f.write("Partial epoch save: {:d}".format(epoch+epoch_offset) + '\n')
+                        f.write("S2 MSE: {:f}".format() + '\n')
+                        f.write("Skewness MSE: {:f}".format() + '\n')
+                        f.write("Flatness MSE: {:f}".format() + '\n')
+                    saved_partial_res = saved_partial_res + 1
+        
+        # print('Epoch [{}/{}] -\t Generator Loss: {:7.4f} \t/\t\t Discriminator Loss: {:7.4f}'.format(epoch+1, epochs, loss_generator_array[epoch+epoch_offset], loss_discriminator_array[epoch+epoch_offset]))
         # sys.stdout.flush()
 
     end_time = time()
-    # print("Total time elapsed for training:", end_time - start_time)
-
-    # n_samples = 64 # Generate 64 samples
-    # noise = torch.randn((n_samples, noise_size[0], noise_size[1]), device=device)
-    # with torch.no_grad():
-    #     generated_samples = generator(noise)
-    # np.savez(out_dir+"/samples.npz", generated_samples.cpu().detach().numpy())
-
+    
     np.savez(out_dir+"/metaEvo.npz", \
             loss_fake = loss_fake_array.cpu().detach().numpy(), \
             loss_fake_s2 = loss_fake_s2_array.cpu().detach().numpy(), \
@@ -299,77 +316,42 @@ def test_print(str_):
 
 
 # nohup python3 train_model_hyperparams.py > nohup_1.out &
-if __name__ == '__main__':
+if __name__ == '__main__':                        
+    data_type = "full" # full samples from the original data     
+    data_stride = 2**15
+    len_samples = 2**15
+    noise_size=(1, len_samples)
 
-	range_loss = np.arange(10,90,5)
-	weights_losses_arr = []
-	for l_samples in range_loss:
-		for l_s2 in range_loss:
-			for l_skewness in range_loss:
-				for l_flatness in range_loss:
-					if l_samples >= max([l_s2, l_skewness, l_flatness]):
-						if l_s2 >= max([l_skewness, l_flatness]):
-							if l_samples + l_s2 + l_skewness + l_flatness == 100:
-								weights_losses_arr.append([l_samples/ 100, l_s2/ 100, l_skewness/ 100, l_flatness/ 100] )
-								
-	data_type = "full" # full samples from the original data     
-	data_stride = 2**15
-	len_samples = 2**15
-	noise_size=(1, len_samples)
+    lr = 0.002
+    epochs = 250
+    batch_size = 16
+    k_epochs_d = 2
 
-	lr = 0.002
-	epochs = 350
-	batch_size = 16
-	k_epochs_d = 2
+    weights_sample_losses = torch.Tensor([1,1,0.5,0.5,0.5,0.5,0.25,0.25,0.25,0.25,0.25,0.25,0.25,0.25])
+    weights_losses = [0.5, 0.2, 0.15, 0.15]
+    continue_training = 'guL8Zi'
 
-	weights_sample_losses = torch.Tensor([1,1,0.5,0.5,0.5,0.5,0.25,0.25,0.25,0.25,0.25,0.25,0.25,0.25])
-	
-	# weights_losses : # Samples, s2, skewness, flatness
-	# nohup python3 train_model_hyperparams.py > nohup_14.out &
-	# Each of these takes about 8 hs to complete with multiprocessing 
-	#ssh 22
-	#weights_losses_arr = [[0.3, 0.25, 0.2, 0.25], [0.3, 0.25, 0.25, 0.2], [0.3, 0.3, 0.1, 0.3]] #nohup2
-	#weights_losses_arr = [[0.3, 0.3, 0.15, 0.25], [0.3, 0.3, 0.2, 0.2], [0.3, 0.3, 0.25, 0.15], [0.3, 0.3, 0.3, 0.1]] #nohup3
-	# ssh 23
-	#weights_losses_arr = [[0.35, 0.25, 0.15, 0.25], [0.35, 0.25, 0.2, 0.2], [0.35, 0.25, 0.25, 0.15], [0.35, 0.3, 0.1, 0.25]] #nohup4
-	#weights_losses_arr = [[0.35, 0.3, 0.15, 0.2], [0.35, 0.3, 0.2, 0.15], [0.35, 0.3, 0.25, 0.1], [0.35, 0.35, 0.1, 0.2]] #nohup5
-	# ssh 24
-	#weights_losses_arr = [[0.35, 0.35, 0.15, 0.15], [0.35, 0.35, 0.2, 0.1], [0.4, 0.2, 0.2, 0.2], [0.4, 0.25, 0.1, 0.25]] #nohup6
-	#weights_losses_arr = [[0.4, 0.25, 0.15, 0.2], [0.4, 0.25, 0.2, 0.15], [0.4, 0.25, 0.25, 0.1], [0.4, 0.3, 0.1, 0.2]] #nohup7
-	# DONE
-	# weights_losses_arr = [[0.45, 0.2, 0.2, 0.15], [0.45, 0.25, 0.1, 0.2]] #nohup9
-	
-	# shh 21 nohup python3 train_model_hyperparams.py > nohup_1.out &
-	# weights_losses_arr = [[0.4, 0.35, 0.15, 0.1]] #nohup15
-	# ssh 24
-	# weights_losses_arr = [[0.5, 0.3, 0.1, 0.1]] #nohup18
-	# ssh 25
+    out_dir = './generated'
+    out_dir = ut.get_dir(out_dir)
 
-	weights_losses_arr = [[0.35, 0.35, 0.20, 0.10]] #nohup2x
+    meta_dict = {
+        "lr":lr,
+        "epochs":epochs,
+        "batch_size":batch_size,
+        "k_epochs_d":k_epochs_d,
+        "out_dir":out_dir,
+        "weights_sample_losses":weights_sample_losses,
+        "weights_losses":weights_losses,
+        "data_type_loading":data_type,
+        "data_type_stride":data_stride,
+        "len_samples":len_samples,
+        "continue_training":continue_training,
+        "train_file_type": "Training done for a combined discriminator loss with structure functions",
+    }
 
-	for weights_losses in weights_losses_arr:
-		out_dir = './generated'
-		out_dir = ut.get_dir(out_dir)
-		
-		meta_dict = {
-			"lr":lr,
-			"epochs":epochs,
-			"batch_size":batch_size,
-			"k_epochs_d":k_epochs_d,
-			"out_dir":out_dir,
-			"weights_sample_losses":weights_sample_losses,
-			"weights_losses":weights_losses,
-			"data_type_loading":data_type,
-			"data_type_stride":data_stride,
-			"len_samples":len_samples,
-			"train_file_type": "Training done for a combined discriminator loss with structure functions",
-		}
-		
-		ut.save_meta(meta_dict, out_dir)
-		print("Begun training " + out_dir + " " + str(weights_losses))
-		train_model(lr, epochs, batch_size, k_epochs_d, weights_sample_losses, weights_losses, data_type, data_stride, len_samples, out_dir, noise_size)
-		print("Finished training " + out_dir + " " + str(weights_losses))
+    ut.save_meta(meta_dict, out_dir)
+    print("Begun training " + out_dir + " " + str(weights_losses))
+    sys.stdout.flush()
+    train_model_continue(continue_training, lr, epochs, batch_size, k_epochs_d, weights_sample_losses, weights_losses, data_type, data_stride, len_samples, out_dir, noise_size)
 
-		with open( "hyperparam_evo.txt", "a") as f:
-			f.write(str(weights_losses) + " || " + out_dir + '\n')
-   
+    print("Finished training " + out_dir + " " + str(weights_losses))
