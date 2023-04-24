@@ -284,6 +284,9 @@ def train_model( lr, epochs, batch_size, k_epochs_d, weights_sample_losses, weig
 
     torch.save(generator.state_dict(), out_dir + '/generator.pt')
     torch.save(discriminator.state_dict(), out_dir + '/discriminator.pt')
+    torch.save(discriminator_s2.state_dict(), out_dir + '/discriminator_s2.pt')
+    torch.save(discriminator_skewness.state_dict(), out_dir + '/discriminator_skewness.pt')
+    torch.save(discriminator_flatness.state_dict(), out_dir + '/discriminator_flatness.pt')
 
     with open( os.path.join(out_dir, "time.txt"), "w") as f:
         f.write("Total time to train in seconds: {:f}".format(end_time - start_time))
