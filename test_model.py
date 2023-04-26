@@ -10,7 +10,8 @@ from model_generator import CNNGeneratorBigConcat as CNNGenerator
 # All 52 models 
 # model_names = ["mFwn3R", "EDDVg4", "1mnY3T", "4K9Vke", "6SgDhO", "13whmJ", "ORUKrz", "k5cpTg", "cyy81t", "3fzNLY", "XZ9Nph", "2i5EIu", "f5tOXl", "VUwRRy", "zXxm1p", "VTsm0o", "aKbLgh", "7PU6YZ", "Bnh0Pu", "gatNfU", "1qgc3k", "rsJbjN", "HLBoe3", "asIZKM", "02781t", "LFkfTr", "C4V4Lr", "81xhQr", "upbfBM", "xUzY79", "VMiMnc", "XcHcf4", "RwXQOQ", "i2i1vL", "1dT8m4", "tggFw3", "xnyGwo", "lvvMPG", "xupKrj", "etFaYm", "ZNEcCr", "guL8Zi", "rQ4xhZ", "o6jpvw", "H5Ewep", "GCJ2mB", "v5Cy7Z", "QDX49a", "o755la", "LPyYuW", "maCwVz", "w8bTmC"]
 # model_names = ["XO6y76", "DNza3x", "6gyLxg", "5UJL4D", "cHl4Dw", "6TBtpc", "w7zGFq", "maKGwp", "oLWtgC"]
-model_names = ["guL8Zi"]
+# model_names = ["guL8Zi"]
+model_names = ["OiyrCF", "7ABZBx", "6sc0r8", "veqA65"]
 
 def plot_histogram(x, model_name, y=None, plt_path=None, name="histogram"):
 	if plt_path is None:
