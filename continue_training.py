@@ -302,15 +302,27 @@ def train_model_continue( continue_path, lr, epochs, batch_size, k_epochs_d, wei
 				loss_generator_array[epoch+epoch_offset] += loss_generator.item()
 		# print('Epoch [{}/{}] -\t Generator Loss: {:7.4f} \t/\t\t Discriminator Loss: {:7.4f}'.format(epoch+1, epochs, loss_generator_array[epoch+epoch_offset], loss_discriminator_array[epoch+epoch_offset]))
 		# sys.stdout.flush()
+		
 		# If the mean S2, Skewness and Flatness are 'good enough' then save the model
-		generated_signal = generator(torch.randn((measure_batch_size, noise_size[0], noise_size[1]), device=device)) 
-		structure_f = ut.calculate_structure_noInplace(generated_signal, scales, device=device)
-		measures = torch.mean(torch.square(normalize_struct(torch.mean(structure_f[:,:,:], dim=0)) - struct_mean_real), dim=1)
+		struct_mean_generated = torch.zeros((3, scales.shape[0]), device=device)
+		with torch.no_grad():
+			for i_batch in range(measure_batch_size):
+				# Generate the samples
+				noise = torch.randn((batch_size_, noise_size[0], noise_size[1]), device=device)		
+				generated_signal = generator(noise) 
+				
+				# Generate the structure functions from the data 
+				struct = ut.calculate_structure_noInplace(generated_signal, scales, device=device)
+				struct_mean_generated += torch.mean(struct[:,:,:], dim=0)
+		
+		struct_mean_generated = normalize_struct(struct_mean_generated / measure_batch_size)
+		measures = torch.mean( torch.square(struct_mean_generated - struct_mean_real), dim=1)
 		
 		measures_array[:,epoch+epoch_offset] = measures
 		
-		if (measures <= save_threshold).all().item():
+		if torch.mean(measures).item() <= save_threshold:
 			base_partial_dir = os.path.join(out_dir, "partial_{:d}".format(saved_partial_res))
+			os.mkdir(base_partial_dir)
 			torch.save(generator.state_dict(), os.path.join(base_partial_dir, 'generator.pt'))
 			torch.save(discriminator.state_dict(), os.path.join(base_partial_dir, 'discriminator.pt'))
 			torch.save(discriminator_s2.state_dict(), os.path.join(base_partial_dir, 'discriminator_s2.pt'))
@@ -318,12 +330,13 @@ def train_model_continue( continue_path, lr, epochs, batch_size, k_epochs_d, wei
 			torch.save(discriminator_flatness.state_dict(), os.path.join(base_partial_dir, 'discriminator_flatness.pt'))
 						
 			with open( os.path.join(base_partial_dir, "partial_meta.txt"), "w") as f:
-				f.write("Partial epoch save: {:d}".format(epoch+epoch_offset) + '\n')
+				f.write("Partial epoch save: {:d} ({:d} in training)".format(epoch+epoch_offset, epoch) + '\n')
 				f.write("S2 MSE: " + str(measures[0].item()) + '\n')
 				f.write("Skewness MSE: " + str(measures[1].item()) + '\n')
 				f.write("Flatness MSE: " + str(measures[2].item()) + '\n')
 			saved_partial_res = saved_partial_res + 1
-		
+			
+			save_threshold = torch.mean(measures).item()
 
 	end_time = time()
 
@@ -369,16 +382,18 @@ if __name__ == '__main__':
 	len_samples = 2**15
 	noise_size=(1, len_samples)
 
-	lr = 0.002 
-	epochs = 1000
-	batch_size = 16
+	lr = 0.001
+	epochs = 500
+	batch_size = 32
+	measure_batch_size = 8
+	
 	k_epochs_d = 2
 
 	weights_sample_losses = torch.Tensor([1,1,0.5,0.5,0.5,0.5,0.25,0.25,0.25,0.25,0.25,0.25,0.25,0.25])
-	weights_losses = [0.4, 0.3, 0.15, 0.15]
+	weights_losses = [0.5, 0.2, 0.15, 0.15]
 	continue_training = None
-	measure_batch_size = 128
-	save_threshold = 0.002
+	
+	save_threshold = 0.01
 	out_dir = './generated'
 	out_dir = ut.get_dir(out_dir)
 
