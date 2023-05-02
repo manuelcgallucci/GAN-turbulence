@@ -20,7 +20,7 @@ import nn_definitions as nn_d
 import utility as ut
 # CNNGeneratorBCNocnn1
 from model_generator import CNNGeneratorBigConcat as CNNGenerator
-from model_discriminator import DiscriminatorMultiNet16_4 as Discriminator
+from model_discriminator import DiscriminatorMultiNet16_2 as Discriminator
 from model_discriminator import DiscriminatorStructures as DiscriminatorStructures
 import torch.multiprocessing as mp
 
@@ -389,7 +389,7 @@ if __name__ == '__main__':
 	
 	k_epochs_d = 2
 
-	weights_sample_losses = torch.Tensor([1,1,0.5,0.5,0.5,0.5,0.25,0.25,0.25,0.25,0.25,0.25,0.25,0.25])
+	weights_sample_losses = torch.Tensor([1,1,0.5,0.5,0.5,0.5,0.25,0.25,0.25,0.25,0.25,0.25,0.25,0.25,0.125,0.125,0.125,0.125,0.125,0.125,0.125,0.125,0.125,0.125,0.125,0.125,0.125,0.125,0.125,0.125 ])
 	weights_losses = [0.5, 0.2, 0.15, 0.15]
 	continue_training = None
 	
