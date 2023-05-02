@@ -2,6 +2,7 @@ import torch
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+import re
 
 import utility as ut
 import nn_definitions as nn_d
@@ -11,7 +12,8 @@ from model_generator import CNNGeneratorBigConcat as CNNGenerator
 # model_names = ["mFwn3R", "EDDVg4", "1mnY3T", "4K9Vke", "6SgDhO", "13whmJ", "ORUKrz", "k5cpTg", "cyy81t", "3fzNLY", "XZ9Nph", "2i5EIu", "f5tOXl", "VUwRRy", "zXxm1p", "VTsm0o", "aKbLgh", "7PU6YZ", "Bnh0Pu", "gatNfU", "1qgc3k", "rsJbjN", "HLBoe3", "asIZKM", "02781t", "LFkfTr", "C4V4Lr", "81xhQr", "upbfBM", "xUzY79", "VMiMnc", "XcHcf4", "RwXQOQ", "i2i1vL", "1dT8m4", "tggFw3", "xnyGwo", "lvvMPG", "xupKrj", "etFaYm", "ZNEcCr", "guL8Zi", "rQ4xhZ", "o6jpvw", "H5Ewep", "GCJ2mB", "v5Cy7Z", "QDX49a", "o755la", "LPyYuW", "maCwVz", "w8bTmC"]
 # model_names = ["XO6y76", "DNza3x", "6gyLxg", "5UJL4D", "cHl4Dw", "6TBtpc", "w7zGFq", "maKGwp", "oLWtgC"]
 # model_names = ["guL8Zi"]
-model_names = ["OiyrCF", "7ABZBx", "6sc0r8", "veqA65"]
+
+model_names = ["nT3DDD", "OzG8rq", "PZjR80", "kbZ49a", "hMowk1"]
 
 def plot_histogram(x, model_name, y=None, plt_path=None, name="histogram"):
 	if plt_path is None:
@@ -58,10 +60,9 @@ def compute_metrics(s_gen, s_real, scales, divisions = [5,2350], type_="full"):
 		
 	return metrics 
 	
-def test_model(scales, model_id=None, n_samples=64, n_batches=4, len_=2**15, edge=4096, device="cuda", normalize=False):
-	data_dir = os.path.join('./generated', model_id)
+def test_model(scales, data_dir, n_samples=64, n_batches=4, len_=2**15, edge=4096, device="cuda", normalize=False):
+	
 	generator_dir = os.path.join(data_dir, "generator.pt")
-
 	if not os.path.exists(generator_dir):
 		print("Model {:s} doesnt exist!".format(model_id))
 		return None 
@@ -99,7 +100,7 @@ if __name__ == "__main__":
 	len_=2**15
 	
 	normalize=False
-	metrics_type="partial"
+	metrics_type="full"
 	
 	if normalize:
 		print("\nNormalized!")
@@ -123,7 +124,19 @@ if __name__ == "__main__":
 		struct_mean_real = normalize_struct(struct_mean_real)
 		
 	for model_name in model_names:
-		struct_mean_generated=test_model(scales, model_id=model_name, n_batches=n_batches, n_samples=n_samples, len_=len_, device=device, normalize=normalize)
+		base_data_dir = os.path.join("./generated", "{:s}".format(model_name))
+		
+		struct_mean_generated=test_model(scales, data_dir=base_data_dir, n_batches=n_batches, n_samples=n_samples, len_=len_, device=device, normalize=normalize)
 		if not struct_mean_generated is None:
 			metrics = compute_metrics(struct_mean_generated, struct_mean_real, scales, type_=metrics_type)
 			print(model_name, *["{:.8f}".format(m).replace(".",",") for m in metrics])
+		
+		for dir_ in os.listdir(base_data_dir):
+			if "partial" in dir_:
+				partial_id = int("".join(re.findall('\d+', dir_)))
+				data_dir = os.path.join("./generated", "{:s}".format(model_name), dir_)
+				
+				struct_mean_generated=test_model(scales, data_dir=data_dir, n_batches=n_batches, n_samples=n_samples, len_=len_, device=device, normalize=normalize)
+				if not struct_mean_generated is None:
+					metrics = compute_metrics(struct_mean_generated, struct_mean_real, scales, type_=metrics_type)
+					print("{:s}_p{:d}".format(model_name, partial_id), *["{:.8f}".format(m).replace(".",",") for m in metrics])
