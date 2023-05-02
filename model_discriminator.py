@@ -541,6 +541,205 @@ class DiscriminatorMultiNet16_4(nn.Module):
         out = torch.cat((p16384_0, p16384_1, p8192_0, p8192_1, p8192_2, p8192_3, p4096_0, p4096_1, p4096_2, p4096_3, p4096_4, p4096_5, p4096_6, p4096_7),dim=1)
         return out
 
+class DiscriminatorMultiNet16_2(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+        self.cnn16384 = nn.Sequential(
+			nn.Conv1d(1, 4, kernel_size = 8, stride = 4, padding = 0, bias = False),
+			nn.BatchNorm1d(4),
+			nn.LeakyReLU(0.2, inplace=False),
+
+			nn.Conv1d(4, 8, kernel_size = 8, stride = 4, padding = 0, bias = False),
+			nn.BatchNorm1d(8),
+			nn.LeakyReLU(0.2, inplace=False),
+
+			nn.Conv1d(8, 16, kernel_size = 5, stride = 3, padding = 0, bias = False),
+			nn.BatchNorm1d(16),
+			nn.LeakyReLU(0.2, inplace=False),
+
+			nn.Conv1d(16, 16, kernel_size = 5, stride = 2, padding = 0, bias = False),
+			nn.BatchNorm1d(16),
+			nn.LeakyReLU(0.2, inplace=False),
+
+			nn.Conv1d(16, 32, kernel_size = 5, stride = 2, padding = 0, bias = False),
+			nn.BatchNorm1d(32),
+			nn.LeakyReLU(0.2, inplace=False),
+
+			nn.Conv1d(32, 64, kernel_size = 3, stride = 2, padding = 0, bias = False),
+			nn.BatchNorm1d(64),
+			nn.LeakyReLU(0.2, inplace=False),
+
+			nn.Conv1d(64, 64, kernel_size = 3, stride = 2, padding = 0, bias = False),
+			nn.BatchNorm1d(64),
+			nn.LeakyReLU(0.2, inplace=False),
+
+			nn.Conv1d(64, 64, kernel_size = 3, stride = 2, padding = 0, bias = False),
+			nn.BatchNorm1d(64),
+			nn.LeakyReLU(0.2, inplace=False),
+
+			nn.Flatten(),
+
+			nn.Linear(64*9, 64),
+			nn.LeakyReLU(0.2),
+
+			nn.Linear(64, 1),
+            nn.Sigmoid()
+		)
+
+        self.cnn8192 = nn.Sequential(
+			nn.Conv1d(1, 4, kernel_size = 8, stride = 4, padding = 0, bias = False),
+			nn.BatchNorm1d(4),
+			nn.LeakyReLU(0.2, inplace=False),
+
+			nn.Conv1d(4, 8, kernel_size = 8, stride = 4, padding = 0, bias = False),
+			nn.BatchNorm1d(8),
+			nn.LeakyReLU(0.2, inplace=False),
+
+			nn.Conv1d(8, 16, kernel_size = 5, stride = 3, padding = 0, bias = False),
+			nn.BatchNorm1d(16),
+			nn.LeakyReLU(0.2, inplace=False),
+
+			nn.Conv1d(16, 16, kernel_size = 5, stride = 2, padding = 0, bias = False),
+			nn.BatchNorm1d(16),
+			nn.LeakyReLU(0.2, inplace=False),
+
+			nn.Conv1d(16, 32, kernel_size = 5, stride = 2, padding = 0, bias = False),
+			nn.BatchNorm1d(32),
+			nn.LeakyReLU(0.2, inplace=False),
+
+			nn.Conv1d(32, 64, kernel_size = 3, stride = 2, padding = 0, bias = False),
+			nn.BatchNorm1d(64),
+			nn.LeakyReLU(0.2, inplace=False),
+
+			nn.Conv1d(64, 64, kernel_size = 3, stride = 2, padding = 0, bias = False),
+			nn.BatchNorm1d(64),
+			nn.LeakyReLU(0.2, inplace=False),
+
+			nn.Conv1d(64, 64, kernel_size = 3, stride = 2, padding = 0, bias = False),
+			nn.BatchNorm1d(64),
+			nn.LeakyReLU(0.2, inplace=False),
+
+			nn.Flatten(),
+
+			nn.Linear(64*4, 64),
+			nn.LeakyReLU(0.2),
+
+			nn.Linear(64, 1),
+            nn.Sigmoid()
+		)
+
+        self.cnn4096 = nn.Sequential(
+			nn.Conv1d(1, 4, kernel_size = 8, stride = 4, padding = 0, bias = False),
+            nn.BatchNorm1d(4),
+            nn.LeakyReLU(0.2, inplace=False),
+
+            nn.Conv1d(4, 8, kernel_size = 5, stride = 3, padding = 0, bias = False),
+            nn.BatchNorm1d(8),
+            nn.LeakyReLU(0.2, inplace=False),
+
+            nn.Conv1d(8, 16, kernel_size = 5, stride = 2, padding = 0, bias = False),
+            nn.BatchNorm1d(16),
+            nn.LeakyReLU(0.2, inplace=False),
+
+            nn.Conv1d(16, 32, kernel_size = 5, stride = 2, padding = 0, bias = False),
+            nn.BatchNorm1d(32),
+            nn.LeakyReLU(0.2, inplace=False),
+
+            nn.Conv1d(32, 64, kernel_size = 3, stride = 2, padding = 0, bias = False),
+            nn.BatchNorm1d(64),
+            nn.LeakyReLU(0.2, inplace=False),
+
+            nn.Conv1d(64, 64, kernel_size = 3, stride = 2, padding = 0, bias = False),
+            nn.BatchNorm1d(64),
+            nn.LeakyReLU(0.2, inplace=False),
+
+            nn.Conv1d(64, 64, kernel_size = 3, stride = 2, padding = 0, bias = False),
+            nn.BatchNorm1d(64),
+            nn.LeakyReLU(0.2, inplace=False),
+
+            nn.Flatten(),
+            
+            nn.Linear(64*9, 64),
+            nn.LeakyReLU(0.2),
+
+            nn.Linear(64, 1),
+            nn.Sigmoid()
+		)
+
+        self.cnn2048 = nn.Sequential(
+			nn.Conv1d(1, 4, kernel_size = 5, stride = 3, padding = 0, bias = False),
+            nn.BatchNorm1d(4),
+            nn.LeakyReLU(0.2, inplace=False),
+
+            nn.Conv1d(4, 8, kernel_size = 5, stride = 2, padding = 0, bias = False),
+            nn.BatchNorm1d(8),
+            nn.LeakyReLU(0.2, inplace=False),
+
+            nn.Conv1d(8, 16, kernel_size = 5, stride = 2, padding = 0, bias = False),
+            nn.BatchNorm1d(16),
+            nn.LeakyReLU(0.2, inplace=False),
+
+            nn.Conv1d(16, 16, kernel_size = 3, stride = 2, padding = 0, bias = False),
+            nn.BatchNorm1d(16),
+            nn.LeakyReLU(0.2, inplace=False),
+
+            nn.Conv1d(16, 32, kernel_size = 3, stride = 2, padding = 0, bias = False),
+            nn.BatchNorm1d(32),
+            nn.LeakyReLU(0.2, inplace=False),
+
+            nn.Conv1d(32, 64, kernel_size = 3, stride = 2, padding = 0, bias = False),
+            nn.BatchNorm1d(64),
+            nn.LeakyReLU(0.2, inplace=False),
+
+            nn.Flatten(),
+            
+            nn.Linear(64*20, 64),
+            nn.LeakyReLU(0.2),
+
+            nn.Linear(64, 1),
+            nn.Sigmoid()
+		)
+		
+    def forward(self, x):
+
+        p16384_0 = self.cnn16384(x[:,:,:16384])
+        p16384_1 = self.cnn16384(x[:,:,16384:])
+
+        p8192_0 = self.cnn8192(x[:,:,:8192])
+        p8192_1 = self.cnn8192(x[:,:,8192:16384])
+        p8192_2 = self.cnn8192(x[:,:,16384:24576])
+        p8192_3 = self.cnn8192(x[:,:,24576:])
+
+        p4096_0 = self.cnn4096(x[:,:,:4096])
+        p4096_1 = self.cnn4096(x[:,:,4096:8192])
+        p4096_2 = self.cnn4096(x[:,:,8192:12288])
+        p4096_3 = self.cnn4096(x[:,:,12288:16384])
+        p4096_4 = self.cnn4096(x[:,:,16384:20480])
+        p4096_5 = self.cnn4096(x[:,:,20480:24576])
+        p4096_6 = self.cnn4096(x[:,:,24576:28672])
+        p4096_7 = self.cnn4096(x[:,:,28672:])
+        
+        p2048_0 = self.cnn2048(x[:,:,:2048])
+        p2048_1 = self.cnn2048(x[:,:,2048:4096])
+        p2048_2 = self.cnn2048(x[:,:,4096:6144])
+        p2048_3 = self.cnn2048(x[:,:,6144:8192])
+        p2048_4 = self.cnn2048(x[:,:,8192:10240])
+        p2048_5 = self.cnn2048(x[:,:,10240:12288])
+        p2048_6 = self.cnn2048(x[:,:,12288:14336])
+        p2048_7 = self.cnn2048(x[:,:,14336:16384])
+        p2048_8 = self.cnn2048(x[:,:,16384:18432])
+        p2048_9 = self.cnn2048(x[:,:,18432:20480])
+        p2048_10 = self.cnn2048(x[:,:,20480:22528])
+        p2048_11 = self.cnn2048(x[:,:,22528:24576])
+        p2048_12 = self.cnn2048(x[:,:,24576:26624])
+        p2048_13 = self.cnn2048(x[:,:,26624:28672])
+        p2048_14 = self.cnn2048(x[:,:,28672:30720])
+        p2048_15 = self.cnn2048(x[:,:,30720:])
+        
+        out = torch.cat((p16384_0, p16384_1, p8192_0, p8192_1, p8192_2, p8192_3, p4096_0, p4096_1, p4096_2, p4096_3, p4096_4, p4096_5, p4096_6, p4096_7, p2048_0, p2048_1, p2048_2, p2048_3, p2048_4, p2048_5, p2048_6, p2048_7, p2048_8, p2048_9, p2048_10, p2048_11, p2048_12, p2048_13, p2048_14, p2048_15),dim=1)
+        return out
+
 
 class DiscriminatorMultiNet16_4For2_16(nn.Module):
 	def __init__(self):
