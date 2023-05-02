@@ -13,9 +13,9 @@ from model_generator import CNNGeneratorBigConcat as CNNGenerator
 # from model_discriminator import DiscriminatorMultiNet16 as Discriminator
 #data_dir = './generated/U2lVlk/'
 
-model_names = ["OiyrCF", "7ABZBx", "6sc0r8", "veqA65"]
+model_names = ["nT3DDD", "OzG8rq", "PZjR80", "kbZ49a", "hMowk1"]
 
-data_dir = "./generated/guL8Zi/"
+data_dir = "./generated/xxx/"
 temp_dir = "./temp/"
 save = True
 display = False
@@ -28,12 +28,21 @@ def main():
 		print(model_name)
 		# plot_real_data()
 		global data_dir
-		data_dir = "./generated/{:s}/".format(model_name)
-		plot_history_structureTraining()
+		data_dir = os.path.join("./generated", "{:s}".format(model_name))
+		
 		plot_compare_structure(eta=5, L=2350, n_samples=128, n_batches=16, len_=samples_len)
+		plt.close("all")
+		plot_history_structureTraining()
+		plt.close("all")
+		
+		for dir_ in os.listdir(data_dir):
+			if "partial" in dir_:
+				data_dir = os.path.join("./generated", "{:s}".format(model_name), dir_)
+				print(data_dir)
+				plot_compare_structure(eta=5, L=2350, n_samples=128, n_batches=16, len_=samples_len)
+				plt.close("all")
 		
 		# plot_histogram(n_samples=64, len_=samples_len, scales=[2,4,8,16,128,256,1024,4096,8192,16384])
-		
 		# plot_training_samples(eta=5, L=2350)
 		# plot_structure()
 
@@ -122,8 +131,47 @@ def plot_training_samples(max_plot=10, mspf=400, n_loop=1, eta=5, L=2350, device
 
 def plot_history_structureTraining():
 	# print(data_dir)
-	history = np.load(data_dir + 'metaEvo.npz')
-
+	history = np.load(os.path.join(data_dir ,'metaEvo.npz'))
+	
+	
+	fig,ax = plt.subplots()
+	ax.plot(np.log10(np.mean(history["measures"], axis=0)), color='#d62728', label="mean measure")
+	ax.set_xlabel("Epochs", fontsize = 14)
+	# set y-axis label
+	ax.set_ylabel("Measure (log)") #, color="red", fontsize=14)
+	ax.legend(loc="upper left")
+	# twin object for two different y-axis on the sample plot
+	ax2=ax.twinx()
+	# make a plot with different y-axis using second axis object
+	ax2.plot(np.log10(history["loss_generator"]), label="loss generator")
+	ax2.plot(np.log10(history["loss_discriminator"]), label="loss discriminator")
+	ax2.set_ylabel("Loss values (log)")#,color="blue",fontsize=14)
+	ax2.legend(loc="lower left")
+	plt.savefig(os.path.join(data_dir, "measures_comp.png"))
+	plt.close()
+	
+	s2_bool = history["measures"][0,:] < 0.002
+	skewness_bool = history["measures"][1,:] < 0.002
+	flatness_bool = history["measures"][2,:] < 0.002
+	min_idx = np.argmin(np.mean(history["measures"], axis=0))
+	print("\t", np.sum(np.logical_and(s2_bool, np.logical_and(skewness_bool, flatness_bool))), np.mean(history["measures"], axis=0)[min_idx],
+		history["measures"][0,min_idx],
+		history["measures"][1,min_idx],
+		history["measures"][2,min_idx])
+	
+	plt.figure()
+	plt.grid()
+	plt.plot(np.log10(history["measures"][0,:]), linewidth=0.5)
+	plt.plot(np.log10(history["measures"][1,:]), linewidth=0.5)
+	plt.plot(np.log10(history["measures"][2,:]), linewidth=0.5)
+	plt.plot(np.log10(np.mean(history["measures"], axis=0)))
+	plt.title("Measures")
+	plt.xlabel("Epochs")
+	plt.ylabel("(log)")
+	plt.legend(["S2", "Skewnnes", "Flatness", "Mean"])
+	plt.savefig(os.path.join(data_dir, "measures.png"))
+	plt.close()	   
+				  
 	plt.figure()
 	plt.plot(history["loss_fake"])
 	plt.plot(history["loss_fake_s2"])
@@ -132,7 +180,7 @@ def plot_history_structureTraining():
 	plt.plot(history["loss_fake_total"])
 	plt.title("Losses of Discriminator fake samples")
 	plt.legend(["Samples", "S2", "skewnnes", "Flatness", "Total"])
-	if save: plt.savefig(data_dir + "loss_discriminator_fake.png")
+	if save: plt.savefig(os.path.join(data_dir, "loss_discriminator_fake.png"))
 	if display: plt.show()
 	plt.close()
 
@@ -144,7 +192,7 @@ def plot_history_structureTraining():
 	plt.plot(history["loss_real_total"])
 	plt.title("Losses of Discriminator real samples")
 	plt.legend(["Samples", "S2", "skewnnes", "Flatness", "Total"])
-	if save: plt.savefig(data_dir + "loss_discriminator_real.png")
+	if save: plt.savefig(os.path.join(data_dir, "loss_discriminator_real.png"))
 	if display: plt.show()
 	plt.close()
 
@@ -157,7 +205,7 @@ def plot_history_structureTraining():
 	plt.plot(history["loss_fake_flatness"])
 	plt.title("Losses of Discriminator in structure functions")
 	plt.legend(["real_S2", "real_skewnnes", "real_Flatness", "fake_S2", "fake_skewnnes", "fake_Flatness"])
-	if save: plt.savefig(data_dir + "loss_discriminator_structures.png")
+	if save: plt.savefig(os.path.join(data_dir, "loss_discriminator_structures.png"))
 	if display: plt.show()
 	plt.close()
 
@@ -169,7 +217,7 @@ def plot_history_structureTraining():
 	plt.plot(history["loss_generator"])
 	plt.title("Losses of Generator samples")
 	plt.legend(["Samples", "S2", "skewnnes", "Flatness", "Total"])
-	if save: plt.savefig(data_dir + "loss_generator.png")
+	if save: plt.savefig(os.path.join(data_dir, "loss_generator.png"))
 	if display: plt.show()
 	plt.close()
 
@@ -179,7 +227,7 @@ def plot_history_structureTraining():
 	plt.plot(history["loss_discriminator"])
 	plt.title("Losses of Discriminator")
 	plt.legend(["Real", "Fake", "Total"])
-	if save: plt.savefig(data_dir + "loss_discriminator.png")
+	if save: plt.savefig(os.path.join(data_dir, "loss_discriminator.png"))
 	if display: plt.show()
 	plt.close()
 
@@ -188,7 +236,7 @@ def plot_history_structureTraining():
 	plt.plot(history["loss_discriminator"])
 	plt.title("Losses of the models")
 	plt.legend(["Generator", "Discriminator"])
-	if save: plt.savefig(data_dir + "losses.png")
+	if save: plt.savefig(os.path.join(data_dir, "losses.png"))
 	if display: plt.show()
 	plt.close()
 
@@ -324,7 +372,7 @@ def plot_compare_structure(n_samples=64, n_batches=2, len_=2**15, edge=4096, eta
 	scales=scales[0:100]
 
 	generator = CNNGenerator().to(device)
-	generator.load_state_dict(torch.load(data_dir + 'generator.pt'))
+	generator.load_state_dict(torch.load(os.path.join(data_dir, 'generator.pt')))
 
 	struct_means_g = torch.zeros((3, scales.shape[0]), device=device)
 	for i_batch in range(n_batches):
@@ -344,7 +392,7 @@ def plot_compare_structure(n_samples=64, n_batches=2, len_=2**15, edge=4096, eta
 		for k in range(generated_samples.shape[0]):
 			plt.plot(generated_samples[k, 0, :], linewidth=1.0)
 		fig.suptitle('Generated samples')
-		plt.savefig(data_dir + "sample_once.png")
+		# plt.savefig(data_dir + "sample_once.png")
 		
 		generated_samples = torch.Tensor(generated_samples).to(device)
 		# generated_samples = torch.Tensor(np.load(data_dir + 'samples.npz')["arr_0"])
@@ -378,8 +426,9 @@ def plot_compare_structure(n_samples=64, n_batches=2, len_=2**15, edge=4096, eta
 		plt.vlines(np.log(L), vlines_lim[idx][0], vlines_lim[idx][1], color='k', linestyle='--', linewidth=2.5, alpha=0.8)
 		plt.vlines(np.log(eta), vlines_lim[idx][0], vlines_lim[idx][1], color='k', linestyle='--', linewidth=2.5, alpha=0.8)
 		plt.grid()
-		if save: plt.savefig(data_dir + "comparison_{:s}.png".format(names[idx]))
+		if save: plt.savefig(os.path.join(data_dir, "comparison_{:s}.png".format(names[idx])))
 		if display: plt.show()
+		plt.close()
 
 	# Compute and save structure function metrics
 	mse_structure = torch.mean(torch.square(struct_means_g - struct_mean_real), dim=1)
