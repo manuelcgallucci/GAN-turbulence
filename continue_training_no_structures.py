@@ -220,10 +220,19 @@ def train_model_continue( continue_path, lr, epochs, batch_size, k_epochs_d, wei
 				structure_f = data_structure_functions[batch_idx].to(device)
 				# structure_f = data_structure_functions[batch_idx]
 				
-				loss_real_s2 = criterion_BCE(discriminator_s2(structure_f[:,0,:])[:,0], target_ones[int(batch_idx == last_batch_idx)])
-				loss_real_skewness = criterion_BCE(discriminator_skewness(structure_f[:,1,:])[:,0], target_ones[int(batch_idx == last_batch_idx)])
-				loss_real_flatness = criterion_BCE(discriminator_flatness(structure_f[:,2,:])[:,0], target_ones[int(batch_idx == last_batch_idx)])
-				
+				if weights_losses[1] != 0:
+					loss_real_s2 = criterion_BCE(discriminator_s2(structure_f[:,0,:])[:,0], target_ones[int(batch_idx == last_batch_idx)])
+				else:
+					loss_real_s2 = 0
+				if weights_losses[2] != 0:
+					loss_real_skewness = criterion_BCE(discriminator_skewness(structure_f[:,1,:])[:,0], target_ones[int(batch_idx == last_batch_idx)])
+				else:
+					loss_real_skewness = 0
+				if weights_losses[3] != 0:
+					loss_real_flatness = criterion_BCE(discriminator_flatness(structure_f[:,2,:])[:,0], target_ones[int(batch_idx == last_batch_idx)])
+				else:
+					loss_real_flatness = 0
+
 				loss_real_total = weights_losses[0] * loss_real + weights_losses[1] * loss_real_s2 + weights_losses[2] * loss_real_skewness + weights_losses[3] * loss_real_flatness
 				# loss_real_total = combine_losses_expAvg( loss_real, loss_real_s2, loss_real_skewness, loss_real_flatness)
 				
@@ -238,11 +247,19 @@ def train_model_continue( continue_path, lr, epochs, batch_size, k_epochs_d, wei
 				
 				structure_f = ut.calculate_structure_noInplace(fake_samples, scales, device=device)
 
-				loss_fake_s2 = criterion_BCE(discriminator_s2(structure_f[:,0,:])[:,0], target_zeros[int(batch_idx == last_batch_idx)])
-				loss_fake_skewness = criterion_BCE(discriminator_skewness(structure_f[:,1,:])[:,0], target_zeros[int(batch_idx == last_batch_idx)])
-				loss_fake_flatness = criterion_BCE(discriminator_flatness(structure_f[:,2,:])[:,0], target_zeros[int(batch_idx == last_batch_idx)])
+				if weights_losses[1] != 0:
+					loss_fake_s2 = criterion_BCE(discriminator_s2(structure_f[:,0,:])[:,0], target_zeros[int(batch_idx == last_batch_idx)])
+				else:
+					loss_fake_s2 = 0
+				if weights_losses[2] != 0:
+					loss_fake_skewness = criterion_BCE(discriminator_skewness(structure_f[:,1,:])[:,0], target_zeros[int(batch_idx == last_batch_idx)])
+				else:
+					loss_fake_skewness = 0
+				if weights_losses[3] != 0:
+					loss_fake_flatness = criterion_BCE(discriminator_flatness(structure_f[:,2,:])[:,0], target_zeros[int(batch_idx == last_batch_idx)])
+				else:
+					loss_fake_flatness = 0
 
-				
 				loss_fake_total = weights_losses[0] * loss_fake + weights_losses[1] * loss_fake_s2 + weights_losses[2] * loss_fake_skewness + weights_losses[3] * loss_fake_flatness
 				# loss_fake_total = combine_losses_expAvg( loss_fake, loss_fake_s2, loss_fake_skewness, loss_fake_flatness)
 				
@@ -255,20 +272,32 @@ def train_model_continue( continue_path, lr, epochs, batch_size, k_epochs_d, wei
 
 				# Discriminator optimizer step
 				optim_d.step()
-				optim_ds2.step()
-				optim_dskewness.step()
-				optim_dflatness.step()
+				if weights_losses[1] != 0:
+					optim_ds2.step()
+				if weights_losses[2] != 0:
+					optim_dskewness.step()
+				if weights_losses[3] != 0:
+					optim_dflatness.step()
 
 				loss_real_array[epoch+epoch_offset] += loss_real.item() / k_epochs_d
-				loss_real_s2_array[epoch+epoch_offset] += loss_real_s2.item() / k_epochs_d
-				loss_real_skewness_array[epoch+epoch_offset] += loss_real_skewness.item() / k_epochs_d
-				loss_real_flatness_array[epoch+epoch_offset] += loss_real_flatness.item() / k_epochs_d
+				if weights_losses[1] != 0:
+					loss_real_s2_array[epoch+epoch_offset] += loss_real_s2.item() / k_epochs_d
+				if weights_losses[2] != 0:
+					loss_real_skewness_array[epoch+epoch_offset] += loss_real_skewness.item() / k_epochs_d
+				if weights_losses[3] != 0:
+					loss_real_flatness_array[epoch+epoch_offset] += loss_real_flatness.item() / k_epochs_d
+				
 				loss_real_total_array[epoch+epoch_offset] += loss_real_total.item() / k_epochs_d
 
 				loss_fake_array[epoch+epoch_offset] += loss_fake.item() / k_epochs_d
-				loss_fake_s2_array[epoch+epoch_offset] += loss_fake_s2.item() / k_epochs_d
-				loss_fake_skewness_array[epoch+epoch_offset] += loss_fake_skewness.item() / k_epochs_d
-				loss_fake_flatness_array[epoch+epoch_offset] += loss_fake_flatness.item() / k_epochs_d
+				
+				if weights_losses[1] != 0:
+					loss_fake_s2_array[epoch+epoch_offset] += loss_fake_s2.item() / k_epochs_d
+				if weights_losses[2] != 0:
+					loss_fake_skewness_array[epoch+epoch_offset] += loss_fake_skewness.item() / k_epochs_d
+				if weights_losses[3] != 0:
+					loss_fake_flatness_array[epoch+epoch_offset] += loss_fake_flatness.item() / k_epochs_d
+				
 				loss_fake_total_array[epoch+epoch_offset] += loss_fake_total.item() / k_epochs_d
 
 				loss_discriminator_array[epoch+epoch_offset] += loss_discriminator.item() / k_epochs_d
@@ -285,9 +314,18 @@ def train_model_continue( continue_path, lr, epochs, batch_size, k_epochs_d, wei
 
 				structure_f = ut.calculate_structure_noInplace(generated_signal, scales, device=device)
 
-				loss_g_s2 = criterion_BCE(discriminator_s2(structure_f[:,0,:])[:,0], target_ones[int(batch_idx == last_batch_idx)])
-				loss_g_skewness = criterion_BCE(discriminator_skewness(structure_f[:,1,:])[:,0], target_ones[int(batch_idx == last_batch_idx)])
-				loss_g_flatness = criterion_BCE(discriminator_flatness(structure_f[:,2,:])[:,0], target_ones[int(batch_idx == last_batch_idx)])
+				if weights_losses[1] != 0:
+					loss_g_s2 = criterion_BCE(discriminator_s2(structure_f[:,0,:])[:,0], target_ones[int(batch_idx == last_batch_idx)])
+				else:
+					loss_g_s2 = 0
+				if weights_losses[2] != 0:
+					loss_g_skewness = criterion_BCE(discriminator_skewness(structure_f[:,1,:])[:,0], target_ones[int(batch_idx == last_batch_idx)])
+				else:
+					loss_g_skewness = 0
+				if weights_losses[3] != 0:
+					loss_g_flatness = criterion_BCE(discriminator_flatness(structure_f[:,2,:])[:,0], target_ones[int(batch_idx == last_batch_idx)])
+				else:
+					loss_g_flatness = 0
 				
 				loss_generator = weights_losses[0] * loss_g_samples + weights_losses[1] * loss_g_s2 + weights_losses[2] * loss_g_skewness + weights_losses[3] * loss_g_flatness
 				
@@ -295,9 +333,12 @@ def train_model_continue( continue_path, lr, epochs, batch_size, k_epochs_d, wei
 				optim_g.step()
 
 				loss_g_array[epoch+epoch_offset] += loss_g_samples.item()
-				loss_g_s2_array[epoch+epoch_offset] += loss_g_s2.item()
-				loss_g_skewness_array[epoch+epoch_offset] += loss_g_skewness.item()
-				loss_g_flatness_array[epoch+epoch_offset] += loss_g_flatness.item()
+				if weights_losses[1] != 0:
+					loss_g_s2_array[epoch+epoch_offset] += loss_g_s2.item()
+				if weights_losses[2] != 0:
+					loss_g_skewness_array[epoch+epoch_offset] += loss_g_skewness.item()
+				if weights_losses[3] != 0:
+					loss_g_flatness_array[epoch+epoch_offset] += loss_g_flatness.item()
 
 				loss_generator_array[epoch+epoch_offset] += loss_generator.item()
 		# print('Epoch [{}/{}] -\t Generator Loss: {:7.4f} \t/\t\t Discriminator Loss: {:7.4f}'.format(epoch+1, epochs, loss_generator_array[epoch+epoch_offset], loss_discriminator_array[epoch+epoch_offset]))
@@ -326,9 +367,12 @@ def train_model_continue( continue_path, lr, epochs, batch_size, k_epochs_d, wei
 			os.mkdir(base_partial_dir)
 			torch.save(generator.state_dict(), os.path.join(base_partial_dir, 'generator.pt'))
 			torch.save(discriminator.state_dict(), os.path.join(base_partial_dir, 'discriminator.pt'))
-			torch.save(discriminator_s2.state_dict(), os.path.join(base_partial_dir, 'discriminator_s2.pt'))
-			torch.save(discriminator_skewness.state_dict(), os.path.join(base_partial_dir, 'discriminator_skewness.pt'))
-			torch.save(discriminator_flatness.state_dict(), os.path.join(base_partial_dir, 'discriminator_flatness.pt'))
+			if weights_losses[1] != 0:
+				torch.save(discriminator_s2.state_dict(), os.path.join(base_partial_dir, 'discriminator_s2.pt'))
+			if weights_losses[2] != 0:
+				torch.save(discriminator_skewness.state_dict(), os.path.join(base_partial_dir, 'discriminator_skewness.pt'))
+			if weights_losses[3] != 0:
+				torch.save(discriminator_flatness.state_dict(), os.path.join(base_partial_dir, 'discriminator_flatness.pt'))
 						
 			with open( os.path.join(base_partial_dir, "partial_meta.txt"), "w") as f:
 				f.write("Partial epoch save: {:d} ({:d} in training)".format(epoch+epoch_offset, epoch) + '\n')
@@ -367,9 +411,12 @@ def train_model_continue( continue_path, lr, epochs, batch_size, k_epochs_d, wei
 
 	torch.save(generator.state_dict(), out_dir + '/generator.pt')
 	torch.save(discriminator.state_dict(), out_dir + '/discriminator.pt')
-	torch.save(discriminator_s2.state_dict(), out_dir + '/discriminator_s2.pt')
-	torch.save(discriminator_skewness.state_dict(), out_dir + '/discriminator_skewness.pt')
-	torch.save(discriminator_flatness.state_dict(), out_dir + '/discriminator_flatness.pt')
+	if weights_losses[1] != 0:
+		torch.save(discriminator_s2.state_dict(), out_dir + '/discriminator_s2.pt')
+	if weights_losses[2] != 0:
+		torch.save(discriminator_skewness.state_dict(), out_dir + '/discriminator_skewness.pt')
+	if weights_losses[3] != 0:
+		torch.save(discriminator_flatness.state_dict(), out_dir + '/discriminator_flatness.pt')
 
 	with open( os.path.join(out_dir, "time.txt"), "w") as f:
 		f.write("Total time to train in seconds: {:f}".format(end_time - start_time))
