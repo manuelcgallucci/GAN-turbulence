@@ -24,7 +24,7 @@ from model_discriminator import DiscriminatorMultiNet16_2 as Discriminator
 from model_discriminator import DiscriminatorStructures as DiscriminatorStructures
 import torch.multiprocessing as mp
 
-# nohup python3 continue_training.py > nohup_41.out &
+# nohup python3 continue_training_no_structures.py > nohup_41.out &
 
 def calculate_loss(criterion, predictions, target, weights, n_weights, device):
 	loss = torch.zeros((1), device=device)
@@ -384,17 +384,17 @@ if __name__ == '__main__':
 	noise_size=(1, len_samples)
 
 	lr = 0.001
-	epochs = 1000
+	epochs = 500
 	batch_size = 32
 	measure_batch_size = 8
 	
 	k_epochs_d = 2
 
 	weights_sample_losses = torch.Tensor([1,1,0.5,0.5,0.5,0.5,0.25,0.25,0.25,0.25,0.25,0.25,0.25,0.25,0.125,0.125,0.125,0.125,0.125,0.125,0.125,0.125,0.125,0.125,0.125,0.125,0.125,0.125,0.125,0.125 ])
-	weights_losses = [0.5, 0.2, 0.15, 0.15] # weights for sample, s2, skewness, flatness
+	weights_losses = [1.0, 0.0, 0.0, 0.0] # weights for sample, s2, skewness, flatness
 	continue_training = None
 	
-	save_threshold = 0.99
+	save_threshold = 0.5
 	out_dir = './generated'
 	out_dir = ut.get_dir(out_dir)
 
@@ -411,7 +411,7 @@ if __name__ == '__main__':
 		"len_samples":len_samples,
 		"continue_training":continue_training,
 		"measure_batch_size":measure_batch_size,
-		"train_file_type": "Training done for a combined discriminator loss with structure functions",
+		"train_file_type": "Training done for a combined discriminator loss without structure functions",
 	}
 
 	ut.save_meta(meta_dict, out_dir)

@@ -13,7 +13,12 @@ from model_generator import CNNGeneratorBigConcat as CNNGenerator
 # from model_discriminator import DiscriminatorMultiNet16 as Discriminator
 #data_dir = './generated/U2lVlk/'
 
-model_names = ["nT3DDD", "OzG8rq", "PZjR80", "kbZ49a", "hMowk1"]
+import warnings
+warnings.filterwarnings("default", category=RuntimeWarning)
+
+#model_names = ["npkTHI", "tu2kkp", "F7fO5I", "fz7czQ", "opgAQi"]
+#model_names = ["OvyWsl", "P7PmFA", "Q47i1m", "Ss0yK1"]
+model_names = ["4CLqJd", "JQk4Aj"]
 
 data_dir = "./generated/xxx/"
 temp_dir = "./temp/"
@@ -30,19 +35,21 @@ def main():
 		global data_dir
 		data_dir = os.path.join("./generated", "{:s}".format(model_name))
 		
-		plot_compare_structure(eta=5, L=2350, n_samples=128, n_batches=16, len_=samples_len)
-		plt.close("all")
-		plot_history_structureTraining()
-		plt.close("all")
-		
+		if os.path.exists(os.path.join(data_dir, "generator.pt")):
+			plot_compare_structure(eta=5, L=2350, n_samples=128, n_batches=16, len_=samples_len)
+			#plot_history_structureTraining()
+			#plot_histogram(n_samples=64, len_=samples_len, edge=0, scales=[2,4,8,16,128,256,1024,4096,8192,16384])
+			plt.close("all")
+			
 		for dir_ in os.listdir(data_dir):
 			if "partial" in dir_:
 				data_dir = os.path.join("./generated", "{:s}".format(model_name), dir_)
 				print(data_dir)
-				plot_compare_structure(eta=5, L=2350, n_samples=128, n_batches=16, len_=samples_len)
-				plt.close("all")
-		
-		# plot_histogram(n_samples=64, len_=samples_len, scales=[2,4,8,16,128,256,1024,4096,8192,16384])
+				if os.path.exists(os.path.join(data_dir, "generator.pt")):
+					plot_compare_structure(eta=5, L=2350, n_samples=128, n_batches=16, len_=samples_len)
+					#plot_histogram(n_samples=64, len_=samples_len, edge=0, scales=[2,4,8,16,128,256,1024,4096,8192,16384])
+					plt.close("all")
+					
 		# plot_training_samples(eta=5, L=2350)
 		# plot_structure()
 
@@ -429,7 +436,8 @@ def plot_compare_structure(n_samples=64, n_batches=2, len_=2**15, edge=4096, eta
 		if save: plt.savefig(os.path.join(data_dir, "comparison_{:s}.png".format(names[idx])))
 		if display: plt.show()
 		plt.close()
-
+	
+	plt.close("all")
 	# Compute and save structure function metrics
 	mse_structure = torch.mean(torch.square(struct_means_g - struct_mean_real), dim=1)
 	print(mse_structure)
@@ -437,41 +445,50 @@ def plot_compare_structure(n_samples=64, n_batches=2, len_=2**15, edge=4096, eta
 ### ======================================= ###
 
 def plot_histogram(n_samples=64, len_=2**15, edge=4096, n_bins=150, scales=[2**x for x in range(1,14)], device="cuda"):
-    generator = CNNGenerator().to(device)
-    generator.load_state_dict(torch.load(data_dir + 'generator.pt'))
-    noise = torch.randn((n_samples, 1, len_+2*edge), device=device)
-    with torch.no_grad():
-        generated_samples = generator(noise)
-    
-    generated_samples = generated_samples[:,:,edge:-edge].cpu()
-    
-    # generated_samples = torch.Tensor(np.load(data_dir + 'samples.npz')["arr_0"])
-    # Histogram for the real samples
-    #generated_samples = torch.Tensor(np.load('./data/data.npy')[:,None,:])
+	generator = CNNGenerator().to(device)
+	# if not os.path.exists(os.path.join(data_dir,'generator.pt')):
+	# 	print("Path doesnt exist!", os.path.join(data_dir,'generator.pt'))
+	# 	return None
+		
+	generator.load_state_dict(torch.load(os.path.join(data_dir,'generator.pt')))
+	noise = torch.randn((n_samples, 1, len_+2*edge), device=device)
+	with torch.no_grad():
+		generated_samples = generator(noise)
 
-    # generated_samples = torch.Tensor(np.reshape( np.load('./data/full_signal.npy'), (1,-1))[:,None,:])
-    # print(generated_samples.size())
-    histograms, bins = ut.calculate_histogram(generated_samples, scales, n_bins, device="cpu", normalize_incrs=True) 
-    histograms = np.log(histograms)
+	if edge > 0:
+		generated_samples = generated_samples[:,:,edge:-edge].cpu()
 
-    histgn, binsg = np.histogram(np.random.randn(n_samples*len_), bins=n_bins, density=True)
-    # tuple to set the limits of the scales and color
-    params_ = [(32, "Dissipative", "black"), (512, "Inertial", "blue"), (32768, "Dissipative", "red")]
-    delta_hist = 2
-    plt.figure(figsize=(6,6))
-    for idx, scale in enumerate(scales):
-        param_idx = np.argmax(np.array([scale <= param[0] for param in params_]) > 0)
-        plt.plot(bins[0:-1], delta_hist * (-idx) + histograms[idx,:], color=params_[param_idx][2], linewidth=1.5, label="sc:"+str(scale))
-    plt.plot(binsg[0:-1],delta_hist * (-(len(scales)-1)) + np.log(histgn), "--", color="k", linewidth=1.5, alpha=0.8, label="Gaussian")
-    plt.title("Histogram")
-    plt.legend(bbox_to_anchor = (1.25, 0.6), loc='center right')
-    plt.yticks([])
-    plt.ylabel(r'$\log(P(\delta^{\prime}_l u(x)))$')
-    plt.xlabel(r'$\delta^{\prime}_l u(x)$')
-    plt.grid()
-    plt.tight_layout()
-    if save: plt.savefig(data_dir + "histogram.png")
-    if display: plt.show()
+	# generated_samples = torch.Tensor(np.load(data_dir + 'samples.npz')["arr_0"])
+	# Histogram for the real samples
+	#generated_samples = torch.Tensor(np.load('./data/data.npy')[:,None,:])
+
+	# generated_samples = torch.Tensor(np.reshape( np.load('./data/full_signal.npy'), (1,-1))[:,None,:])
+	# print(generated_samples.size())
+	histograms, bins = ut.calculate_histogram(generated_samples, scales, n_bins, device="cpu", normalize_incrs=True) 
+	histograms = np.log(histograms)
+
+	histgn, binsg = np.histogram(np.random.randn(n_samples*len_), bins=n_bins, density=True)
+	# tuple to set the limits of the scales and color
+	params_ = [(32, "Dissipative", "black"), (512, "Inertial", "blue"), (32768, "Dissipative", "red")]
+	delta_hist = 2
+	plt.figure(figsize=(6,6))
+	for idx, scale in enumerate(scales):
+		param_idx = np.argmax(np.array([scale <= param[0] for param in params_]) > 0)
+		plt.plot(bins[idx, 0:-1], delta_hist * (-idx) + histograms[idx,:], color=params_[param_idx][2], linewidth=1.5, label="sc:"+str(scale))
+	plt.plot(binsg[0:-1],delta_hist * (-(len(scales)-1)) + np.log(histgn), "--", color="k", linewidth=1.5, alpha=0.8, label="Gaussian")
+	plt.title("Histogram")
+	plt.legend(bbox_to_anchor = (1.25, 0.6), loc='center right')
+	plt.yticks([])
+	plt.ylabel(r'$\log(P(\delta^{\prime}_l u(x)))$')
+	plt.xlabel(r'$\delta^{\prime}_l u(x)$')
+	plt.grid()
+	plt.tight_layout()
+	if save: 
+		if edge == 0:
+			plt.savefig(os.path.join(data_dir, "histogram_noedge.png"))
+		else:
+			plt.savefig(os.path.join(data_dir, "histogram.png"))
+	if display: plt.show()
 
 ### ======================================= ###
 

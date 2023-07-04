@@ -59,7 +59,7 @@ def normalize_struct(struct):
 	struct = (struct - struct_min) / (struct_max - struct_min)
 	return struct
 	     
-def train_model_continue( continue_path, lr, epochs, batch_size, k_epochs_d, weights_sample_losses, weights_losses, data_type, data_stride, len_samples,out_dir, noise_size, measure_batch_size, save_threshold):
+def train_model_continue( continue_path, lr, epochs, edge, batch_size, k_epochs_d, weights_sample_losses, weights_losses, data_type, data_stride, len_samples,out_dir, noise_size, measure_batch_size, save_threshold):
 
 	n_weights = weights_sample_losses.size()[0]
 	# Normalization for each loss
@@ -228,15 +228,15 @@ def train_model_continue( continue_path, lr, epochs, batch_size, k_epochs_d, wei
 				# loss_real_total = combine_losses_expAvg( loss_real, loss_real_s2, loss_real_skewness, loss_real_flatness)
 				
 				## False samples (Create random noise and run the generator on them)
-				noise = torch.randn((batch_size_, noise_size[0], noise_size[1]), device=device)
+				noise = torch.randn((batch_size_, noise_size[0], noise_size[1] + 2*edge), device=device)
 				with torch.no_grad():
 					fake_samples = generator(noise)
 									
 				# Fake samples
-				predictions = discriminator(fake_samples)
+				predictions = discriminator(fake_samples[:,:,edge:-edge])
 				loss_fake = calculate_loss(criterion_BCE, predictions, target_zeros[int(batch_idx == last_batch_idx)], weights_sample_losses, n_weights, device)
 				
-				structure_f = ut.calculate_structure_noInplace(fake_samples, scales, device=device)
+				structure_f = ut.calculate_structure_noInplace(fake_samples[:,:,edge:-edge], scales, device=device)
 
 				loss_fake_s2 = criterion_BCE(discriminator_s2(structure_f[:,0,:])[:,0], target_zeros[int(batch_idx == last_batch_idx)])
 				loss_fake_skewness = criterion_BCE(discriminator_skewness(structure_f[:,1,:])[:,0], target_zeros[int(batch_idx == last_batch_idx)])
@@ -276,14 +276,14 @@ def train_model_continue( continue_path, lr, epochs, batch_size, k_epochs_d, wei
 				## TRAIN GENERATOR
 				generator.zero_grad()
 
-				noise = torch.randn((batch_size_, noise_size[0], noise_size[1]), device=device)
+				noise = torch.randn((batch_size_, noise_size[0], noise_size[1] + 2*edge), device=device)
 				generated_signal = generator(noise) 
 
 				# Fake samples
-				predictions = discriminator(generated_signal)
+				predictions = discriminator(generated_signal[:,:,edge:-edge])
 				loss_g_samples = calculate_loss(criterion_BCE, predictions, target_ones[int(batch_idx == last_batch_idx)], weights_sample_losses, n_weights, device)
 
-				structure_f = ut.calculate_structure_noInplace(generated_signal, scales, device=device)
+				structure_f = ut.calculate_structure_noInplace(generated_signal[:,:,edge:-edge], scales, device=device)
 
 				loss_g_s2 = criterion_BCE(discriminator_s2(structure_f[:,0,:])[:,0], target_ones[int(batch_idx == last_batch_idx)])
 				loss_g_skewness = criterion_BCE(discriminator_skewness(structure_f[:,1,:])[:,0], target_ones[int(batch_idx == last_batch_idx)])
@@ -308,11 +308,11 @@ def train_model_continue( continue_path, lr, epochs, batch_size, k_epochs_d, wei
 		with torch.no_grad():
 			for i_batch in range(measure_batch_size):
 				# Generate the samples
-				noise = torch.randn((batch_size_, noise_size[0], noise_size[1]), device=device)		
+				noise = torch.randn((batch_size_, noise_size[0], noise_size[1] + 2*edge), device=device)		
 				generated_signal = generator(noise) 
 				
 				# Generate the structure functions from the data 
-				struct = ut.calculate_structure_noInplace(generated_signal, scales, device=device)
+				struct = ut.calculate_structure_noInplace(generated_signal[:,:,edge:-edge], scales, device=device)
 				struct_mean_generated += torch.mean(struct[:,:,:], dim=0)
 		
 		struct_mean_generated = normalize_struct(struct_mean_generated / measure_batch_size)
@@ -382,6 +382,7 @@ if __name__ == '__main__':
 	data_stride = 2**15
 	len_samples = 2**15
 	noise_size=(1, len_samples)
+	edge = 4096
 
 	lr = 0.001
 	epochs = 1000
@@ -391,7 +392,7 @@ if __name__ == '__main__':
 	k_epochs_d = 2
 
 	weights_sample_losses = torch.Tensor([1,1,0.5,0.5,0.5,0.5,0.25,0.25,0.25,0.25,0.25,0.25,0.25,0.25,0.125,0.125,0.125,0.125,0.125,0.125,0.125,0.125,0.125,0.125,0.125,0.125,0.125,0.125,0.125,0.125 ])
-	weights_losses = [0.5, 0.2, 0.15, 0.15] # weights for sample, s2, skewness, flatness
+	weights_losses = [0.5, 0.2, 0.15, 0.15]
 	continue_training = None
 	
 	save_threshold = 0.99
@@ -403,6 +404,7 @@ if __name__ == '__main__':
 		"epochs":epochs,
 		"batch_size":batch_size,
 		"k_epochs_d":k_epochs_d,
+		"edge":edge,
 		"out_dir":out_dir,
 		"weights_sample_losses":weights_sample_losses,
 		"weights_losses":weights_losses,
@@ -421,6 +423,6 @@ if __name__ == '__main__':
 		continue_path = os.path.join("./generated",continue_training)
 	else:
 		continue_path=None
-	train_model_continue(continue_path, lr, epochs, batch_size, k_epochs_d, weights_sample_losses, weights_losses, data_type, data_stride, len_samples, out_dir, noise_size, measure_batch_size, save_threshold)
+	train_model_continue(continue_path, lr, epochs, edge, batch_size, k_epochs_d, weights_sample_losses, weights_losses, data_type, data_stride, len_samples, out_dir, noise_size, measure_batch_size, save_threshold)
 
 	print("Finished training " + out_dir + " " + str(weights_losses))
