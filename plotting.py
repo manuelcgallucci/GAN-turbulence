@@ -18,7 +18,9 @@ warnings.filterwarnings("default", category=RuntimeWarning)
 
 #model_names = ["npkTHI", "tu2kkp", "F7fO5I", "fz7czQ", "opgAQi"]
 #model_names = ["OvyWsl", "P7PmFA", "Q47i1m", "Ss0yK1"]
-model_names = ["4CLqJd", "JQk4Aj"]
+#model_names = ["4CLqJd", "JQk4Aj"]
+#model_names = ["AQpjLo", "VeMRWz", "GULqKq"]
+model_names = ["vVyQT3", "p9RJbX", "sfWgOY"]
 
 data_dir = "./generated/xxx/"
 temp_dir = "./temp/"

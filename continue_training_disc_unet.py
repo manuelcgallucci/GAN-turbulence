@@ -20,11 +20,11 @@ import nn_definitions as nn_d
 import utility as ut
 # CNNGeneratorBCNocnn1
 from model_generator import CNNGeneratorBigConcat as CNNGenerator
-from model_discriminator import DiscriminatorMultiNet16_2 as Discriminator
+from model_discriminator import DiscriminatorUNet as Discriminator
 from model_discriminator import DiscriminatorStructures as DiscriminatorStructures
 import torch.multiprocessing as mp
 
-# nohup python3 continue_training.py > nohup_41.out &
+# nohup python3 continue_training_disc_unet.py > nohup_401.out &
 
 def calculate_loss(criterion, predictions, target, weights, n_weights, device):
 	loss = torch.zeros((1), device=device)
@@ -58,10 +58,15 @@ def normalize_struct(struct):
 	struct_max = struct.max(dim=1, keepdim=True)[0]
 	struct = (struct - struct_min) / (struct_max - struct_min)
 	return struct
-	     
-def train_model_continue( continue_path, lr, epochs, batch_size, k_epochs_d, weights_sample_losses, weights_losses, data_type, data_stride, len_samples,out_dir, noise_size, measure_batch_size, save_threshold):
 
-	n_weights = weights_sample_losses.size()[0]
+def create_zeros_tensor(n, m, device):
+	return  torch.zeros((n, m), device=device)
+
+def create_ones_tensor(n, m, device):
+	return  torch.ones((n, m), device=device)
+
+def train_model_continue( continue_path, lr, epochs, batch_size, k_epochs_d, weights_losses, data_type, data_stride, len_samples,out_dir, noise_size, measure_batch_size, save_threshold):
+	
 	# Normalization for each loss
 
 	device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -87,6 +92,7 @@ def train_model_continue( continue_path, lr, epochs, batch_size, k_epochs_d, wei
 	discriminator_flatness = load_model_weights(discriminator_flatness, continue_path, '/discriminator_flatness.pt')
 
 	# define loss and optimizers
+	criterion_MSE = torch.nn.MSELoss().to(device)
 	criterion_BCE = torch.nn.BCELoss().to(device)
 	# criterion_MSE = torch.nn.MSELoss().to(device)
 	optim_d = torch.optim.Adam(discriminator.parameters(), lr=lr, betas=(0.5, 0.999))
@@ -153,15 +159,14 @@ def train_model_continue( continue_path, lr, epochs, batch_size, k_epochs_d, wei
 		measures_array = torch.zeros((3,epochs))
 
 		epoch_offset = 0
-
+	
 	## Optimizers
 	optim_g.zero_grad()
 	optim_d.zero_grad()
 	optim_ds2.zero_grad()
 	optim_dskewness.zero_grad()
 	optim_dflatness.zero_grad()
-
-	# Take the target ones and zeros for the batch size and for the last (not complete batch)
+	
 	target_ones_full = torch.ones((batch_size), device=device)
 	target_ones_partial = torch.ones((data_samples - batch_size * int(data_samples / batch_size)), device=device)
 	target_ones = [target_ones_full, target_ones_partial]
@@ -169,7 +174,8 @@ def train_model_continue( continue_path, lr, epochs, batch_size, k_epochs_d, wei
 	target_zeros_full = torch.zeros((batch_size), device=device)
 	target_zeros_partial = torch.zeros((data_samples - batch_size * int(data_samples / batch_size)), device=device)
 	target_zeros = [target_zeros_full, target_zeros_partial]
-
+	
+	batch_sizes = [batch_size, data_samples - batch_size * int(data_samples / batch_size)]
 	last_batch_idx = np.ceil(data_samples / batch_size) - 1
 
 	# Pre-calculate the structure function for dataset
@@ -214,8 +220,8 @@ def train_model_continue( continue_path, lr, epochs, batch_size, k_epochs_d, wei
 				# optim_d.zero_grad()
 				## True samples
 				
-				predictions = discriminator(data_)
-				loss_real = calculate_loss(criterion_BCE, predictions, target_ones[int(batch_idx == last_batch_idx)], weights_sample_losses, n_weights, device)
+				predictions = discriminator(data_) # n_batch x len_signal (2**15)
+				loss_real = criterion_MSE(predictions, create_ones_tensor(batch_sizes[int(batch_idx == last_batch_idx)], len_samples, device))
 				
 				structure_f = data_structure_functions[batch_idx].to(device)
 				# structure_f = data_structure_functions[batch_idx]
@@ -234,7 +240,7 @@ def train_model_continue( continue_path, lr, epochs, batch_size, k_epochs_d, wei
 									
 				# Fake samples
 				predictions = discriminator(fake_samples)
-				loss_fake = calculate_loss(criterion_BCE, predictions, target_zeros[int(batch_idx == last_batch_idx)], weights_sample_losses, n_weights, device)
+				loss_fake = criterion_MSE(predictions, create_zeros_tensor(batch_sizes[int(batch_idx == last_batch_idx)], len_samples, device))
 				
 				structure_f = ut.calculate_structure_noInplace(fake_samples, scales, device=device)
 
@@ -281,7 +287,7 @@ def train_model_continue( continue_path, lr, epochs, batch_size, k_epochs_d, wei
 
 				# Fake samples
 				predictions = discriminator(generated_signal)
-				loss_g_samples = calculate_loss(criterion_BCE, predictions, target_ones[int(batch_idx == last_batch_idx)], weights_sample_losses, n_weights, device)
+				loss_g_samples = criterion_MSE(predictions, create_ones_tensor(batch_sizes[int(batch_idx == last_batch_idx)], len_samples, device))
 
 				structure_f = ut.calculate_structure_noInplace(generated_signal, scales, device=device)
 
@@ -390,7 +396,6 @@ if __name__ == '__main__':
 	
 	k_epochs_d = 2
 
-	weights_sample_losses = torch.Tensor([1,1,0.5,0.5,0.5,0.5,0.25,0.25,0.25,0.25,0.25,0.25,0.25,0.25,0.125,0.125,0.125,0.125,0.125,0.125,0.125,0.125,0.125,0.125,0.125,0.125,0.125,0.125,0.125,0.125 ])
 	weights_losses = [0.5, 0.2, 0.15, 0.15] # weights for sample, s2, skewness, flatness
 	continue_training = None
 	
@@ -404,7 +409,6 @@ if __name__ == '__main__':
 		"batch_size":batch_size,
 		"k_epochs_d":k_epochs_d,
 		"out_dir":out_dir,
-		"weights_sample_losses":weights_sample_losses,
 		"weights_losses":weights_losses,
 		"data_type_loading":data_type,
 		"data_type_stride":data_stride,
@@ -421,6 +425,6 @@ if __name__ == '__main__':
 		continue_path = os.path.join("./generated",continue_training)
 	else:
 		continue_path=None
-	train_model_continue(continue_path, lr, epochs, batch_size, k_epochs_d, weights_sample_losses, weights_losses, data_type, data_stride, len_samples, out_dir, noise_size, measure_batch_size, save_threshold)
+	train_model_continue(continue_path, lr, epochs, batch_size, k_epochs_d, weights_losses, data_type, data_stride, len_samples, out_dir, noise_size, measure_batch_size, save_threshold)
 
 	print("Finished training " + out_dir + " " + str(weights_losses))
