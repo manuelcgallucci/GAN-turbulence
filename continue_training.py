@@ -59,7 +59,7 @@ def normalize_struct(struct):
 	struct = (struct - struct_min) / (struct_max - struct_min)
 	return struct
 	     
-def train_model_continue( continue_path, lr, epochs, batch_size, k_epochs_d, weights_sample_losses, weights_losses, data_type, data_stride, len_samples,out_dir, noise_size, measure_batch_size, save_threshold):
+def train_model_continue( continue_path, lr, epochs, batch_size, k_epochs_d, weights_sample_losses, weights_losses, data_type, data_stride, len_samples,out_dir, noise_size, measure_batch_size, save_threshold, verbose=False):
 
 	n_weights = weights_sample_losses.size()[0]
 	# Normalization for each loss
@@ -273,35 +273,36 @@ def train_model_continue( continue_path, lr, epochs, batch_size, k_epochs_d, wei
 
 				loss_discriminator_array[epoch+epoch_offset] += loss_discriminator.item() / k_epochs_d
 
-				## TRAIN GENERATOR
-				generator.zero_grad()
+			## TRAIN GENERATOR
+			generator.zero_grad()
 
-				noise = torch.randn((batch_size_, noise_size[0], noise_size[1]), device=device)
-				generated_signal = generator(noise) 
+			noise = torch.randn((batch_size_, noise_size[0], noise_size[1]), device=device)
+			generated_signal = generator(noise) 
 
-				# Fake samples
-				predictions = discriminator(generated_signal)
-				loss_g_samples = calculate_loss(criterion_BCE, predictions, target_ones[int(batch_idx == last_batch_idx)], weights_sample_losses, n_weights, device)
+			# Fake samples
+			predictions = discriminator(generated_signal)
+			loss_g_samples = calculate_loss(criterion_BCE, predictions, target_ones[int(batch_idx == last_batch_idx)], weights_sample_losses, n_weights, device)
 
-				structure_f = ut.calculate_structure_noInplace(generated_signal, scales, device=device)
+			structure_f = ut.calculate_structure_noInplace(generated_signal, scales, device=device)
 
-				loss_g_s2 = criterion_BCE(discriminator_s2(structure_f[:,0,:])[:,0], target_ones[int(batch_idx == last_batch_idx)])
-				loss_g_skewness = criterion_BCE(discriminator_skewness(structure_f[:,1,:])[:,0], target_ones[int(batch_idx == last_batch_idx)])
-				loss_g_flatness = criterion_BCE(discriminator_flatness(structure_f[:,2,:])[:,0], target_ones[int(batch_idx == last_batch_idx)])
-				
-				loss_generator = weights_losses[0] * loss_g_samples + weights_losses[1] * loss_g_s2 + weights_losses[2] * loss_g_skewness + weights_losses[3] * loss_g_flatness
-				
-				loss_generator.backward()
-				optim_g.step()
+			loss_g_s2 = criterion_BCE(discriminator_s2(structure_f[:,0,:])[:,0], target_ones[int(batch_idx == last_batch_idx)])
+			loss_g_skewness = criterion_BCE(discriminator_skewness(structure_f[:,1,:])[:,0], target_ones[int(batch_idx == last_batch_idx)])
+			loss_g_flatness = criterion_BCE(discriminator_flatness(structure_f[:,2,:])[:,0], target_ones[int(batch_idx == last_batch_idx)])
+			
+			loss_generator = weights_losses[0] * loss_g_samples + weights_losses[1] * loss_g_s2 + weights_losses[2] * loss_g_skewness + weights_losses[3] * loss_g_flatness
+			
+			loss_generator.backward()
+			optim_g.step()
 
-				loss_g_array[epoch+epoch_offset] += loss_g_samples.item()
-				loss_g_s2_array[epoch+epoch_offset] += loss_g_s2.item()
-				loss_g_skewness_array[epoch+epoch_offset] += loss_g_skewness.item()
-				loss_g_flatness_array[epoch+epoch_offset] += loss_g_flatness.item()
+			loss_g_array[epoch+epoch_offset] += loss_g_samples.item()
+			loss_g_s2_array[epoch+epoch_offset] += loss_g_s2.item()
+			loss_g_skewness_array[epoch+epoch_offset] += loss_g_skewness.item()
+			loss_g_flatness_array[epoch+epoch_offset] += loss_g_flatness.item()
 
-				loss_generator_array[epoch+epoch_offset] += loss_generator.item()
-		# print('Epoch [{}/{}] -\t Generator Loss: {:7.4f} \t/\t\t Discriminator Loss: {:7.4f}'.format(epoch+1, epochs, loss_generator_array[epoch+epoch_offset], loss_discriminator_array[epoch+epoch_offset]))
-		# sys.stdout.flush()
+			loss_generator_array[epoch+epoch_offset] += loss_generator.item()
+		if verbose:
+			print('Epoch [{}/{}] -\t Generator Loss: {:7.4f} \t/\t\t Discriminator Loss: {:7.4f}'.format(epoch+1, epochs, loss_generator_array[epoch+epoch_offset], loss_discriminator_array[epoch+epoch_offset]))
+			sys.stdout.flush()
 		
 		# If the mean S2, Skewness and Flatness are 'good enough' then save the model
 		struct_mean_generated = torch.zeros((3, scales.shape[0]), device=device)
