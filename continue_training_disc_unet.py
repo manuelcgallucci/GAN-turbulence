@@ -24,7 +24,7 @@ from model_discriminator import DiscriminatorMultiNet16_2 as Discriminator
 from model_discriminator import DiscriminatorStructuresUNet as DiscriminatorStructures
 import torch.multiprocessing as mp
 
-# nohup python3 continue_training.py > nohup_41.out &
+# nohup python3 continue_training_disc_unet.py > nohup_41.out &
 
 def calculate_loss(criterion, predictions, target, weights, n_weights, device):
 	loss = torch.zeros((1), device=device)

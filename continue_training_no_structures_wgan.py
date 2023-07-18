@@ -20,8 +20,8 @@ import nn_definitions as nn_d
 import utility as ut
 # CNNGeneratorBCNocnn1
 from model_generator import CNNGeneratorBigConcat as CNNGenerator
-#from model_discriminator import DiscriminatorMultiNet16_2 as Discriminator
-from model_discriminator import DiscriminatorSimpleCNN as Discriminator
+from model_discriminator import DiscriminatorMultiNet16_2 as Discriminator
+#from model_discriminator import DiscriminatorSimpleCNN as Discriminator
 import torch.multiprocessing as mp
 
 # nohup python3 continue_training_no_structures.py > nohup_41.out &
@@ -30,6 +30,12 @@ def calculate_loss(criterion, predictions, target, weights, n_weights, device):
 	loss = torch.zeros((1), device=device)
 	for k in range(n_weights):
 		loss += weights[k] * criterion(predictions[:,k], target)
+	return loss
+
+def combine_predictions(predictions, weights, n_weights, device):
+	loss = torch.zeros((1), device=device)
+	for k in range(n_weights):
+		loss += weights[k] * predictions[:,k]
 	return loss
 
 def combine_losses_expAvg(loss_samples, loss_s2, loss_skewness, loss_flatness):
@@ -145,7 +151,8 @@ def train_model_continue( continue_path, lr, epochs, batch_size, k_epochs_d, wei
 				# optim_d.zero_grad()
 				## True samples				
 				predictions_real = discriminator(data_)
-				
+				predictions_real = combine_predictions(predictions_real, weights_sample_losses, n_weights, device)
+
 				## False samples (Create random noise and run the generator on them)
 				noise = torch.randn((batch_size_, noise_size[0], noise_size[1]), device=device)
 				with torch.no_grad():
@@ -153,6 +160,7 @@ def train_model_continue( continue_path, lr, epochs, batch_size, k_epochs_d, wei
 									
 				# Fake samples
 				predictions_fake = discriminator(fake_samples)
+				predictions_fake = combine_predictions(predictions_fake, weights_sample_losses, n_weights, device)
 
 				# Combine the losses 
 				loss_discriminator = torch.mean(predictions_fake) - torch.mean(predictions_real)
@@ -172,6 +180,7 @@ def train_model_continue( continue_path, lr, epochs, batch_size, k_epochs_d, wei
 
 			# Fake samples
 			predictions = discriminator(generated_signal)
+			predictions = combine_predictions(predictions, weights_sample_losses, n_weights, device)
 			
 			loss_generator = -torch.mean(predictions)
 			
